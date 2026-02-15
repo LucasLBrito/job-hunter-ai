@@ -45,6 +45,10 @@ async def shutdown_event():
     logger.info("Shutting down Job Hunter AI...")
 
 
+# Include routers
+from app.api.v1 import auth
+app.include_router(auth.router, prefix=f"{settings.API_V1_PREFIX}/auth", tags=["auth"])
+
 @app.get("/")
 async def root():
     """Root endpoint"""

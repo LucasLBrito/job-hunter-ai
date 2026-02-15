@@ -1,40 +1,36 @@
-fastapi==0.109.2
-uvicorn[standard]==0.27.1
-pydantic==2.6.1
-pydantic-settings==2.1.0
+
+# Core
+fastapi>=0.104.1
+uvicorn[standard]>=0.24.0
+pydantic>=2.0.0
+pydantic-settings>=2.0.0
+email-validator>=2.0.0
+python-dotenv>=1.0.0
 
 # Database
-sqlalchemy==2.0.25
-alembic==1.13.1
-sqlite-anyio==0.2.1
+sqlalchemy>=2.0.0
+alembic>=1.13.0
+aiosqlite>=0.19.0
 
 # Security
-python-jose[cryptography]==3.3.0
-passlib[bcrypt]==1.7.4
-python-multipart==0.0.6
-bcrypt==4.1.2
+passlib[bcrypt]>=1.7.4
+python-jose[cryptography]>=3.3.0
+python-multipart>=0.0.6
+bcrypt==4.0.1  # Pin version compatible with passlib if possible, but pbkdf2 is safer
 
-# LangChain & AI
-langchain==0.1.6
-langchain-openai==0.0.5
-langchain-anthropic==0.1.1
-langgraph==0.0.26
+# External Services
+httpx>=0.25.0
+aiofiles>=23.0.0
+redis>=5.0.0
+hiredis>=2.3.0
 
-# HTTP Client
-httpx==0.26.0
-aiofiles==23.2.1
+# Job Scheduler
+apscheduler>=3.10.0
 
-# Redis & Caching
-redis==5.0.1
-hiredis==2.3.2
-
-# Scheduling
-apscheduler==3.10.4
-
-# Azure
-azure-ai-formrecognizer==3.3.2
-azure-core==1.29.7
-
-# Utilities
-python-dotenv==1.0.1
-email-validator==2.1.0.post1
+# Integrations (Optional)
+azure-ai-formrecognizer>=3.3.0
+azure-core>=1.29.0
+langchain>=0.1.0
+langchain-openai>=0.0.5
+langchain-anthropic>=0.1.0
+langgraph>=0.0.26

@@ -28,18 +28,15 @@ py -m pip install --upgrade pip --quiet
 py -m pip install fastapi==0.104.1 uvicorn[standard]==0.24.0 --quiet
 
 echo.
-echo [4/4] Iniciando servidor...
+echo [5/5] Iniciando servidor FastAPI (Prod)...
 echo.
 echo ========================================
-echo  SERVIDOR RODANDO!
-echo.
-echo  Acesse no navegador:
+echo  Servidor rodando em:
 echo  - http://localhost:8000
-echo  - http://localhost:8000/health  
-echo  - http://localhost:8000/docs
+echo  - http://localhost:8000/docs (Swagger)
 echo.
 echo  Pressione CTRL+C para parar
 echo ========================================
 echo.
 
-py main_simple.py
+uvicorn app.main:app --reload
