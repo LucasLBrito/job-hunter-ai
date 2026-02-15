@@ -1,0 +1,5 @@
+# VERSÃO ULTRA MÍNIMA - Sem Pydantic, só FastAPI puro
+# Para teste com Python 3.14
+
+fastapi==0.104.1
+uvicorn[standard]==0.24.0

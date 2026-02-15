@@ -1,0 +1,123 @@
+version: '3.8'
+
+services:
+  # Backend API (FastAPI) - Production
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      args:
+        - BUILD_ENV=production
+    container_name: jobhunter-backend-prod
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    environment:
+      - ENV=production
+      - DATABASE_URL=sqlite:///./data/database.db
+      - REDIS_URL=redis://redis:6379/0
+      - LOG_LEVEL=INFO
+    env_file:
+      - ./backend/.env.prod
+    depends_on:
+      - redis
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - jobhunter-network
+
+  # Frontend (Next.js) - Production
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+    container_name: jobhunter-frontend-prod
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+    env_file:
+      - ./frontend/.env.prod
+    depends_on:
+      - backend
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - jobhunter-network
+
+  # Redis (Cache e Queue)
+  redis:
+    image: redis:7-alpine
+    container_name: jobhunter-redis-prod
+    volumes:
+      - redis-data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - jobhunter-network
+
+  # Agent Scheduler (Background Jobs)
+  agent-scheduler:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: jobhunter-scheduler-prod
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    environment:
+      - ENV=production
+      - DATABASE_URL=sqlite:///./data/database.db
+      - REDIS_URL=redis://redis:6379/0
+    env_file:
+      - ./backend/.env.prod
+    depends_on:
+      - redis
+      - backend
+    command: python -m app.scripts.run_scheduler
+    restart: unless-stopped
+    networks:
+      - jobhunter-network
+
+  # Nginx Reverse Proxy (opcional para produção)
+  nginx:
+    image: nginx:alpine
+    container_name: jobhunter-nginx-prod
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - frontend
+      - backend
+    restart: unless-stopped
+    networks:
+      - jobhunter-network
+
+networks:
+  jobhunter-network:
+    driver: bridge
+
+volumes:
+  redis-data:
+    driver: local

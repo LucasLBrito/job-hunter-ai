@@ -1,0 +1,93 @@
+version: '3.8'
+
+services:
+  # Backend API (FastAPI)
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    container_name: jobhunter-backend-dev
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+      - ./data:/app/data
+      - ./shared:/app/shared:ro
+    environment:
+      - ENV=development
+      - DATABASE_URL=sqlite:///./data/database.db
+      - REDIS_URL=redis://redis:6379/0
+      - FRONTEND_URL=http://localhost:3000
+      - LOG_LEVEL=DEBUG
+    env_file:
+      - ./backend/.env.dev
+    depends_on:
+      - redis
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    networks:
+      - jobhunter-network
+
+  # Frontend (Next.js)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    container_name: jobhunter-frontend-dev
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+    environment:
+      - NODE_ENV=development
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+      - NEXT_TELEMETRY_DISABLED=1
+    env_file:
+      - ./frontend/.env.dev
+    depends_on:
+      - backend
+    command: npm run dev
+    networks:
+      - jobhunter-network
+
+  # Redis (Cache e Queue)
+  redis:
+    image: redis:7-alpine
+    container_name: jobhunter-redis-dev
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - jobhunter-network
+
+  # Agent Scheduler (Background Jobs)
+  agent-scheduler:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    container_name: jobhunter-scheduler-dev
+    volumes:
+      - ./backend:/app
+      - ./data:/app/data
+      - ./shared:/app/shared:ro
+    environment:
+      - ENV=development
+      - DATABASE_URL=sqlite:///./data/database.db
+      - REDIS_URL=redis://redis:6379/0
+    env_file:
+      - ./backend/.env.dev
+    depends_on:
+      - redis
+      - backend
+    command: python -m app.scripts.run_scheduler
+    networks:
+      - jobhunter-network
+
+networks:
+  jobhunter-network:
+    driver: bridge
+
+volumes:
+  redis-data:
