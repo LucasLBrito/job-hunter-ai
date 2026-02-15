@@ -32,7 +32,7 @@ async def get_current_user(
         raise credentials_exception
     
     # Get user from database
-    user = await crud_user.get_user_by_id(db, user_id=int(user_id))
+    user = await crud_user.get(db, id=int(user_id))
     if user is None:
         raise credentials_exception
     

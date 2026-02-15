@@ -35,6 +35,16 @@ class JobCreate(JobBase):
 
 class JobUpdate(BaseModel):
     """Schema for updating a job"""
+    title: Optional[str] = Field(None, min_length=3, max_length=255)
+    company: Optional[str] = Field(None, min_length=2, max_length=255)
+    description: Optional[str] = None
+    requirements: Optional[str] = None
+    location: Optional[str] = None
+    is_remote: Optional[bool] = None
+    salary_min: Optional[int] = None
+    salary_max: Optional[int] = None
+    salary_currency: Optional[str] = None
+    
     is_favorite: Optional[bool] = None
     is_hidden: Optional[bool] = None
 

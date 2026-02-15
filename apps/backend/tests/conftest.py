@@ -6,7 +6,22 @@ from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sess
 from app.database import Base, get_db
 from app.main import app
 from app.core.config import settings
+# Import models to register them with XML/Metadata
+from app.models.user import User
+from app.models.job import Job
+from app.models.resume import Resume
+from app.models.application import Application
 import os
+import logging
+
+# Configure logging to file
+logging.basicConfig(
+    filename='sqlalchemy.log',
+    filemode='w',
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
 
 # Use an in-memory SQLite database for tests
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
@@ -20,7 +35,11 @@ def event_loop() -> Generator:
 
 @pytest.fixture(scope="session")
 async def db_engine():
-    engine = create_async_engine(TEST_DATABASE_URL, connect_args={"check_same_thread": False})
+    engine = create_async_engine(
+        "sqlite+aiosqlite:///:memory:",
+        echo=True,
+        connect_args={"check_same_thread": False}
+    )
     
     # Create tables
     async with engine.begin() as conn:

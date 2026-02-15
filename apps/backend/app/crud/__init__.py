@@ -1,5 +1,3 @@
-"""CRUD package"""
-
-from app.crud import user
-
-__all__ = ["user"]
+from app.crud.user import user
+from app.crud.job import job
+from app.crud.resume import resume

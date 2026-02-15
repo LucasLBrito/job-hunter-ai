@@ -28,7 +28,7 @@ async def signup(
     - **full_name**: Optional full name
     """
     # Check if email already exists
-    existing_user = await crud_user.get_user_by_email(db, email=user_in.email)
+    existing_user = await crud_user.get_by_email(db, email=user_in.email)
     if existing_user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -36,7 +36,7 @@ async def signup(
         )
     
     # Check if username already exists
-    existing_user = await crud_user.get_user_by_username(db, username=user_in.username)
+    existing_user = await crud_user.get_by_username(db, username=user_in.username)
     if existing_user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -51,7 +51,7 @@ async def signup(
         password=user_in.password,
         full_name=user_in.full_name
     )
-    user = await crud_user.create_user(db, user_in=user_create)
+    user = await crud_user.create(db, user_in=user_create)
     
     return user
 
@@ -70,7 +70,7 @@ async def login(
     Returns JWT access token
     """
     # Authenticate user
-    user = await crud_user.authenticate_user(
+    user = await crud_user.authenticate(
         db, 
         email=form_data.username, 
         password=form_data.password

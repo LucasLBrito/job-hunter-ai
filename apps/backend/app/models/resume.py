@@ -14,6 +14,7 @@ class Resume(Base):
     
     # File info
     filename = Column(String(255), nullable=False)
+    description = Column(Text, nullable=True)
     file_path = Column(String(500), nullable=False)
     file_size = Column(Integer, nullable=True)  # bytes
     file_type = Column(String(50), nullable=True)  # pdf, docx

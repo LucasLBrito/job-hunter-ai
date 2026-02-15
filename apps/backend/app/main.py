@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.database import init_db
+import app.models  # Register models
 import logging
 
 # Configure logging
@@ -46,8 +47,10 @@ async def shutdown_event():
 
 
 # Include routers
-from app.api.v1 import auth
-app.include_router(auth.router, prefix=f"{settings.API_V1_PREFIX}/auth", tags=["auth"])
+from app.api import v1
+app.include_router(v1.auth, prefix=f"{settings.API_V1_PREFIX}/auth", tags=["auth"])
+app.include_router(v1.jobs, prefix=f"{settings.API_V1_PREFIX}/jobs", tags=["jobs"])
+app.include_router(v1.resumes, prefix=f"{settings.API_V1_PREFIX}/resumes", tags=["resumes"])
 
 @app.get("/")
 async def root():

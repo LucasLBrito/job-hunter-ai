@@ -28,6 +28,13 @@ from app.schemas.job import (
     JobFilters
 )
 
+from app.schemas.resume import (
+    ResumeBase,
+    ResumeCreate,
+    ResumeUpdate,
+    ResumeResponse
+)
+
 __all__ = [
     # User
     "UserBase",
@@ -51,4 +58,9 @@ __all__ = [
     "JobAnalysis",
     "JobResponse",
     "JobFilters",
+    # Resume
+    "ResumeBase",
+    "ResumeCreate", 
+    "ResumeUpdate",
+    "ResumeResponse",
 ]
