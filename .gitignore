@@ -71,3 +71,6 @@ htmlcov/
 *.bak
 *.tmp
 .cache/
+
+# Exceptions
+!apps/frontend/src/lib/
