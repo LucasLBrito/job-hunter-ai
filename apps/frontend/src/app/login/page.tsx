@@ -41,12 +41,12 @@ export default function LoginPage() {
             // Backend expects OAuth2 form data usually, but let's check auth router.
             // app/api/v1/endpoints/auth.py: /login/access-token expects OAuth2PasswordRequestForm
             // which is form-data: username, password.
-            const formData = new FormData();
+            const formData = new URLSearchParams();
             formData.append('username', data.username);
             formData.append('password', data.password);
 
             const response = await api.post('/auth/login', formData, {
-                headers: { 'Content-Type': 'multipart/form-data' }
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
             });
             return response.data;
         },

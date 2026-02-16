@@ -61,6 +61,7 @@ async def login(
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: AsyncSession = Depends(get_db)
 ):
+    print(f"DEBUG LOGIN ATTEMPT: username={form_data.username} password_len={len(form_data.password)}")
     """
     OAuth2 compatible token login
     
