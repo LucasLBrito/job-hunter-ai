@@ -25,7 +25,11 @@ class RemoteOKScraper(BaseScraper):
         
         try:
             async with httpx.AsyncClient() as client:
-                response = await client.get(self.RSS_URL)
+                headers = {
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+                }
+                response = await client.get(self.RSS_URL, headers=headers, timeout=10.0)
+                logger.info(f"RemoteOK RSS Status: {response.status_code}")
                 response.raise_for_status()
                 
             feed = feedparser.parse(response.text)
