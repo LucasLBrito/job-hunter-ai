@@ -58,13 +58,14 @@ class ResumeAnalyzer:
                 logger.warning("Gemini not configured. Skipping AI analysis.")
 
             # 4. Prepare Update Data
+            ai_data = ai_data or {} # Ensure it's a dict if None
             has_data = bool(ai_data and not ai_data.get('error'))
             
             update_data = schemas.ResumeUpdate(
                 raw_text=raw_text,
-                structured_data=json.dumps(ai_data) if ai_data else None,
+                structured_data=json.dumps(ai_data) if has_data else None,
                 is_analyzed=has_data,
-                # Map extracted fields to resume columns
+                # Map extracted fields to resume columns if available
                 ai_summary=ai_data.get("ai_summary"),
                 years_of_experience=ai_data.get("years_of_experience"),
                 technical_skills=json.dumps(ai_data.get("technical_skills", [])),
@@ -77,13 +78,15 @@ class ResumeAnalyzer:
             # 5. Update DB
             await crud.resume.update(db=db, db_obj=resume, obj_in=update_data)
             
-            # 6. Update timestamp separately if needed
+            # 6. Update timestamp
             if has_data:
                 resume.analyzed_at = datetime.utcnow()
                 await db.commit()
                 logger.info(f"Successfully analyzed resume {resume_id}")
             else:
-                logger.warning(f"Analysis failed or empty for resume {resume_id}")
+                # Commit the raw text save at least
+                await db.commit()
+                logger.warning(f"Analysis failed or incomplete for resume {resume_id}, but text saved.")
 
         except Exception as e:
             logger.error(f"Unexpected error in process_resume_task for {resume_id}: {e}")
