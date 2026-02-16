@@ -60,7 +60,7 @@ export default function LoginPage() {
             const token = data.access_token;
 
             // Fetch user profile
-            api.get('/users/me', { headers: { Authorization: `Bearer ${token}` } })
+            api.get('/auth/me', { headers: { Authorization: `Bearer ${token}` } })
                 .then((res) => {
                     login(res.data, token);
                     router.push('/dashboard');
