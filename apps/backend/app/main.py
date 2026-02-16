@@ -53,6 +53,8 @@ app.include_router(v1.users, prefix=f"{settings.API_V1_PREFIX}/users", tags=["us
 app.include_router(v1.whatsapp, prefix=f"{settings.API_V1_PREFIX}/whatsapp", tags=["whatsapp"])
 app.include_router(v1.jobs, prefix=f"{settings.API_V1_PREFIX}/jobs", tags=["jobs"])
 app.include_router(v1.resumes, prefix=f"{settings.API_V1_PREFIX}/resumes", tags=["resumes"])
+app.include_router(v1.optimization, prefix=f"{settings.API_V1_PREFIX}/optimization", tags=["optimization"])
+app.include_router(v1.stats, prefix=f"{settings.API_V1_PREFIX}/stats", tags=["stats"])
 
 @app.get("/")
 async def root():

@@ -30,6 +30,15 @@ class User(Base):
     benefits = Column(Text, nullable=True)         # JSON string: ["Health Insurance", "GymPass"]
     industries = Column(Text, nullable=True)       # JSON string: ["Fintech", "Healthtech"]
     
+    # Automation Config (API Keys & Email)
+    gemini_api_key = Column(String(255), nullable=True)
+    openai_api_key = Column(String(255), nullable=True)
+    
+    smtp_email = Column(String(255), nullable=True)
+    smtp_password = Column(String(255), nullable=True) # Stored locally for MVP (ideal: encrypt)
+    smtp_server = Column(String(255), default="smtp.gmail.com")
+    smtp_port = Column(Integer, default=587)
+    
     # Status & Logistics
     current_status = Column(String(50), nullable=True)  # e.g. "Employed", "Open to work"
     reason_for_search = Column(String(100), nullable=True) # e.g. "Better salary", "Career growth"

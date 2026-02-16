@@ -20,6 +20,14 @@ class UserUpdate(BaseModel):
     full_name: Optional[str] = None
     phone: Optional[str] = None
     whatsapp_number: Optional[str] = None
+    
+    # Automation Config
+    gemini_api_key: Optional[str] = None
+    openai_api_key: Optional[str] = None
+    smtp_email: Optional[str] = None
+    smtp_password: Optional[str] = None
+    smtp_server: Optional[str] = None
+    smtp_port: Optional[int] = None
 
 
 class UserPreferencesUpdate(BaseModel):
@@ -40,6 +48,14 @@ class UserPreferencesUpdate(BaseModel):
     reason_for_search: Optional[str] = None
     open_to_relocation: Optional[bool] = None
     availability: Optional[str] = None
+    
+    # Automation Config
+    gemini_api_key: Optional[str] = None
+    openai_api_key: Optional[str] = None
+    smtp_email: Optional[str] = None
+    smtp_password: Optional[str] = None
+    smtp_server: Optional[str] = None
+    smtp_port: Optional[int] = None
 
 
 class UserResponse(UserBase):
@@ -51,6 +67,16 @@ class UserResponse(UserBase):
     is_superuser: bool
     email_verified: bool
     created_at: datetime
+    
+    # Automation Config (Secrets returned for editing - handle with care in FE)
+    gemini_api_key: Optional[str] = None
+    openai_api_key: Optional[str] = None
+    smtp_email: Optional[str] = None
+    # smtp_password: Optional[str] = None # Security: Don't return password by default? 
+    # Decision: Return it for now so user can see it's set, or handle in FE as "********"
+    # Actually, let's NOT return the password for security.
+    smtp_server: Optional[str] = None
+    smtp_port: Optional[int] = None
     
     # Preferences
     technologies: Optional[List[str]] = None

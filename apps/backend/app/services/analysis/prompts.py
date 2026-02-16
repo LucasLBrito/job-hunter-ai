@@ -35,3 +35,24 @@ Rules:
 3. For years_of_experience, estimate based on the work history if not explicitly stated.
 4. Normalize skills to title case (e.g., "Python", "React").
 """
+
+OPTIMIZE_RESUME_PROMPT = """
+You are an expert career coach and resume writer.
+Your task is to rewrite a candidate's resume to better match a specific job description.
+
+Input Resume:
+{resume_text}
+
+Input Job Description:
+{job_description}
+
+Instructions:
+1. Analyze the job description to identify key skills, keywords, and requirements.
+2. Rewrite the resume's "Professional Summary" to highlight relevant experience.
+3. Reorder or emphasize skills in the "Skills" section that match the job.
+4. Tweak bullet points in "Work Experience" to use keywords from the job description (without fabricating experience).
+5. Ensure the tone is professional and action-oriented.
+
+Output format:
+Return the optimized resume content in Markdown format.
+"""
