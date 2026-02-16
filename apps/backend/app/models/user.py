@@ -39,6 +39,15 @@ class User(Base):
     smtp_server = Column(String(255), default="smtp.gmail.com")
     smtp_port = Column(Integer, default=587)
     
+    # WhatsApp Config
+    whatsapp_api_token = Column(String(255), nullable=True)
+    whatsapp_phone_number_id = Column(String(50), nullable=True)
+    whatsapp_business_account_id = Column(String(50), nullable=True)
+    
+    # Azure Config
+    azure_document_endpoint = Column(String(255), nullable=True)
+    azure_document_key = Column(String(255), nullable=True)
+    
     # Status & Logistics
     current_status = Column(String(50), nullable=True)  # e.g. "Employed", "Open to work"
     reason_for_search = Column(String(100), nullable=True) # e.g. "Better salary", "Career growth"

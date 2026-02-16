@@ -37,6 +37,10 @@ class Job(Base):
     culture_fit_score = Column(Float, nullable=True)  # 0-100
     company_research = Column(Text, nullable=True)  # JSON string with company info
     
+    # Smart Analysis
+    pros = Column(Text, nullable=True) # JSON list
+    cons = Column(Text, nullable=True) # JSON list
+    
     # Status
     is_active = Column(Boolean, default=True)
     is_favorite = Column(Boolean, default=False)

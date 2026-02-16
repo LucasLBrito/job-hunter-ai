@@ -56,6 +56,8 @@ class JobAnalysis(BaseModel):
     extracted_technologies: Optional[List[str]] = None
     culture_fit_score: Optional[float] = Field(None, ge=0, le=100)
     company_research: Optional[dict] = None
+    pros: Optional[List[str]] = None
+    cons: Optional[List[str]] = None
 
 
 class JobResponse(JobBase):
@@ -69,9 +71,12 @@ class JobResponse(JobBase):
     
     # AI Analysis
     compatibility_score: Optional[float] = None
-    ai_summary: Optional[str] = None
     extracted_technologies: Optional[List[str]] = None
     culture_fit_score: Optional[float] = None
+    
+    # Smart Analysis
+    pros: Optional[List[str]] = None
+    cons: Optional[List[str]] = None
     
     # Timestamps
     posted_date: Optional[datetime] = None

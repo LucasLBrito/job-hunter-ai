@@ -19,15 +19,16 @@ class UserUpdate(BaseModel):
     """Schema for updating user profile"""
     full_name: Optional[str] = None
     phone: Optional[str] = None
-    whatsapp_number: Optional[str] = None
-    
-    # Automation Config
-    gemini_api_key: Optional[str] = None
-    openai_api_key: Optional[str] = None
-    smtp_email: Optional[str] = None
-    smtp_password: Optional[str] = None
     smtp_server: Optional[str] = None
     smtp_port: Optional[int] = None
+    gemini_api_key: Optional[str] = None
+    
+    # WhatsApp & Azure
+    whatsapp_api_token: Optional[str] = None
+    whatsapp_phone_number_id: Optional[str] = None
+    whatsapp_business_account_id: Optional[str] = None
+    azure_document_endpoint: Optional[str] = None
+    azure_document_key: Optional[str] = None
 
 
 class UserPreferencesUpdate(BaseModel):

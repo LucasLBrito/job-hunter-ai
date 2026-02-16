@@ -56,3 +56,21 @@ Instructions:
 Output format:
 Return the optimized resume content in Markdown format.
 """
+
+JOB_MATCH_PROMPT = """
+You are an expert career coach. Compare the Candidate's Resume with the Job Description.
+
+Candidate Resume:
+{resume_text}
+
+Job Description:
+{job_description}
+
+Analyze the compatibility.
+Return a valid JSON object (NO markdown, NO preamble):
+{{
+    "match_score": <int 0-100>,
+    "pros": ["List", "of", "3-5", "key", "strengths/matches"],
+    "cons": ["List", "of", "3-5", "gaps", "or", "negatives"]
+}}
+"""
