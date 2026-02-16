@@ -5,7 +5,7 @@ from app.schemas.user import (
     UserCreate,
     UserUpdate,
     UserResponse,
-    UserPreferences,
+    UserPreferencesUpdate,
     UserInDB
 )
 

@@ -42,6 +42,7 @@ class Settings(BaseSettings):
     # LLM (OpenAI or Anthropic)
     OPENAI_API_KEY: Optional[str] = None
     ANTHROPIC_API_KEY: Optional[str] = None
+    GEMINI_API_KEY: Optional[str] = None
     LLM_PROVIDER: str = "openai"  # "openai" or "anthropic"
     LLM_MODEL: str = "gpt-4o-mini"  # or "claude-3-5-sonnet-20241022"
     
@@ -53,7 +54,7 @@ class Settings(BaseSettings):
     WHATSAPP_API_TOKEN: Optional[str] = None
     WHATSAPP_PHONE_NUMBER_ID: Optional[str] = None
     WHATSAPP_BUSINESS_ACCOUNT_ID: Optional[str] = None
-    WHATSAPP_VERIFY_TOKEN: Optional[str] = None
+    WHATSAPP_VERIFY_TOKEN: str = "jobhunter_verify_token"
     
     # Job Scraping
     MAX_JOBS_PER_SEARCH: int = 50

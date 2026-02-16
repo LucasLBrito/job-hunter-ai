@@ -49,6 +49,8 @@ async def shutdown_event():
 # Include routers
 from app.api import v1
 app.include_router(v1.auth, prefix=f"{settings.API_V1_PREFIX}/auth", tags=["auth"])
+app.include_router(v1.users, prefix=f"{settings.API_V1_PREFIX}/users", tags=["users"])
+app.include_router(v1.whatsapp, prefix=f"{settings.API_V1_PREFIX}/whatsapp", tags=["whatsapp"])
 app.include_router(v1.jobs, prefix=f"{settings.API_V1_PREFIX}/jobs", tags=["jobs"])
 app.include_router(v1.resumes, prefix=f"{settings.API_V1_PREFIX}/resumes", tags=["resumes"])
 

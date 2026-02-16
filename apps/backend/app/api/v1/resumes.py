@@ -1,5 +1,5 @@
 from typing import Any, List
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
 import shutil
 import os
@@ -37,6 +37,7 @@ async def create_resume(
     db: AsyncSession = Depends(deps.get_db),
     file: UploadFile = File(...),
     description: str = Form(None),
+    background_tasks: BackgroundTasks,
     current_user = Depends(deps.get_current_active_user),
 ) -> Any:
     """
@@ -73,6 +74,11 @@ async def create_resume(
     resume = await crud.resume.create_with_owner(
         db=db, obj_in=resume_in, user_id=current_user.id
     )
+    
+    # 5. Trigger Analysis Background Task
+    from app.services.analyzer import resume_analyzer
+    background_tasks.add_task(resume_analyzer.process_resume_task, resume.id, db)
+    
     return resume
 
 @router.get("/{resume_id}", response_model=schemas.ResumeResponse)

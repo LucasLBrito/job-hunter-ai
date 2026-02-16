@@ -18,11 +18,25 @@ class User(Base):
     whatsapp_number = Column(String(20), nullable=True)
     
     # Preferences (JSON)
-    technologies = Column(Text, nullable=True)  # JSON string
+    technologies = Column(Text, nullable=True)  # JSON string: ["Python", "React"]
+    job_titles = Column(Text, nullable=True)    # JSON string: ["Backend Engineer", "Data Scientist"]
+    work_models = Column(Text, nullable=True)   # JSON string: ["Remote", "Hybrid"]
+    employment_types = Column(Text, nullable=True) # JSON string: ["Full-time", "Contract"]
+    company_styles = Column(Text, nullable=True)   # JSON string: ["Startup", "Big Tech"]
     seniority_level = Column(String(50), nullable=True)
-    preferred_locations = Column(Text, nullable=True)  # JSON string
+    preferred_locations = Column(Text, nullable=True)  # JSON string: ["São Paulo", "Remote"]
     salary_min = Column(Integer, nullable=True)
     salary_max = Column(Integer, nullable=True)
+    benefits = Column(Text, nullable=True)         # JSON string: ["Health Insurance", "GymPass"]
+    industries = Column(Text, nullable=True)       # JSON string: ["Fintech", "Healthtech"]
+    
+    # Status & Logistics
+    current_status = Column(String(50), nullable=True)  # e.g. "Employed", "Open to work"
+    reason_for_search = Column(String(100), nullable=True) # e.g. "Better salary", "Career growth"
+    open_to_relocation = Column(Boolean, default=False)
+    availability = Column(String(50), nullable=True)    # e.g. "Immediate", "2 weeks"
+    
+    is_preferences_complete = Column(Boolean, default=False)
     
     # Status
     is_active = Column(Boolean, default=True)

@@ -11,6 +11,10 @@ class CRUDJob:
         result = await db.execute(select(Job).filter(Job.id == id))
         return result.scalars().first()
 
+    async def get_by_external_id(self, db: AsyncSession, external_id: str) -> Optional[Job]:
+        result = await db.execute(select(Job).filter(Job.external_id == external_id))
+        return result.scalars().first()
+
     async def get_multi(
         self, db: AsyncSession, skip: int = 0, limit: int = 100
     ) -> List[Job]:

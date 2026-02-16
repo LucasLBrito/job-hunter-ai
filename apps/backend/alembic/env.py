@@ -36,6 +36,8 @@ if config.config_file_name is not None:
 target_metadata = Base.metadata
 
 # Override URL com settings
+print(f"DEBUG: Current CWD: {os.getcwd()}")
+print(f"DEBUG: Settings DATABASE_URL: {settings.DATABASE_URL}")
 config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
 
 # other values from the config, defined by the needs of env.py,
@@ -82,8 +84,10 @@ async def run_migrations_online() -> None:
     and associate a connection with the context.
 
     """
+    configuration = config.get_section(config.config_ini_section, {})
+    configuration["sqlalchemy.url"] = settings.DATABASE_URL
     connectable = async_engine_from_config(
-        config.get_section(config.config_ini_section, {}),
+        configuration,
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
     )

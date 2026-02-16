@@ -104,13 +104,24 @@ async def main():
         except:
             pass
 
-        # 5. List
-        print("\n📋 Listando currículos no banco:")
+        # 5. List and show analysis
+        print("\n📋 Listando currículos no banco (Aguardando processamento background...):")
+        
+        # Poll for analysis completion
+        import time
+        for _ in range(5):
+            print(".", end="", flush=True)
+            time.sleep(2)
+            
+        print("\n")
         res_list = await client.get(f"{API_URL}/resumes/", headers=headers)
         if res_list.status_code == 200:
             items = res_list.json()
             for item in items:
-                print(f"  - ID {item['id']}: {item['filename']} ({item['file_size']} bytes) - {item['file_path']}")
+                status = "✅ ANALISADO" if item.get('is_analyzed') else "⏳ PENDENTE"
+                skills = item.get('technical_skills') or "[]"
+                print(f"  - ID {item['id']}: {item['filename']} [{status}]")
+                print(f"    Skills: {skills[:100]}...")
         
     print("\n✨ Seed concluído!")
 
