@@ -45,7 +45,7 @@ export default function LoginPage() {
             formData.append('username', data.username);
             formData.append('password', data.password);
 
-            const response = await api.post('/auth/login/access-token', formData, {
+            const response = await api.post('/auth/login', formData, {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
             return response.data;

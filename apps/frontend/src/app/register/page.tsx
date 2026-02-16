@@ -46,14 +46,24 @@ export default function RegisterPage() {
                 password: data.password,
             };
 
-            const response = await api.post('/users/open', payload);
+            const response = await api.post('/auth/signup', payload);
             return response.data;
         },
         onSuccess: () => {
             router.push('/login?registered=true');
         },
         onError: (err: any) => {
-            setError(err.response?.data?.detail || 'Registration failed');
+            const detail = err.response?.data?.detail;
+            if (typeof detail === 'string') {
+                setError(detail);
+            } else if (Array.isArray(detail)) {
+                // Handle Pydantic validation errors (array of objects)
+                setError(detail.map((e: any) => e.msg).join(', ') || 'Validation error');
+            } else if (typeof detail === 'object' && detail !== null) {
+                setError(JSON.stringify(detail));
+            } else {
+                setError('Registration failed. Please try again.');
+            }
         },
     });
 
