@@ -9,6 +9,20 @@ class UserBase(BaseModel):
     username: str = Field(..., min_length=3, max_length=50)
     full_name: Optional[str] = None
 
+    @field_validator('username', 'email', mode='before')
+    @classmethod
+    def strip_whitespace(cls, v):
+        if isinstance(v, str):
+            return v.strip()
+        return v
+
+    @field_validator('username', 'email', mode='before')
+    @classmethod
+    def strip_whitespace(cls, v):
+        if isinstance(v, str):
+            return v.strip()
+        return v
+
 
 class UserCreate(UserBase):
     """Schema for user registration"""
