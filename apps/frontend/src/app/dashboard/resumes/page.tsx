@@ -52,6 +52,49 @@ export default function ResumesPage() {
         }
     });
 
+    // Delete resume mutation
+    const deleteMutation = useMutation({
+        mutationFn: async (resumeId: number) => {
+            await api.delete(`/resumes/${resumeId}`);
+        },
+        onSuccess: () => {
+            refetch();
+        },
+        onError: (err: any) => {
+            setError(err.response?.data?.detail || 'Delete failed.');
+        }
+    });
+
+    // Analyze resume mutation
+    const analyzeMutation = useMutation({
+        mutationFn: async (resumeId: number) => {
+            // Explicitly get token to ensure it's attached
+            const token = localStorage.getItem('token');
+            const headers: Record<string, string> = {};
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
+
+            const response = await api.post(`/resumes/${resumeId}/analyze`, {}, {
+                headers
+            });
+            return response.data;
+        },
+        onSuccess: () => {
+            refetch();
+        },
+        onError: (err: any) => {
+            if (err.response?.status === 401) {
+                setError('Authentication session expired. Please login again.');
+                // Optionally redirect
+                // router.push('/login');
+            } else {
+                setError(err.response?.data?.detail || 'Analysis failed.');
+            }
+        }
+    });
+
+
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const selectedFile = e.target.files?.[0];
         if (selectedFile) {
@@ -73,6 +116,16 @@ export default function ResumesPage() {
             return;
         }
         uploadMutation.mutate();
+    };
+
+    const handleDelete = (resumeId: number) => {
+        if (confirm('Are you sure you want to delete this resume?')) {
+            deleteMutation.mutate(resumeId);
+        }
+    };
+
+    const handleAnalyze = (resumeId: number) => {
+        analyzeMutation.mutate(resumeId);
     };
 
     return (
@@ -177,9 +230,42 @@ export default function ResumesPage() {
                                                 </p>
                                                 <p className="text-sm text-gray-500">
                                                     Uploaded: {new Date(resume.created_at).toLocaleDateString()}
-                                                    {resume.is_analyzed && ' • Analyzed'}
+                                                    {resume.is_analyzed && ' • ✓ Analyzed'}
+                                                    {!resume.is_analyzed && resume.ai_summary?.startsWith('ERROR:') && (
+                                                        <span className="text-red-500 ml-2">
+                                                            • ⚠️ {resume.ai_summary.replace('ERROR:', '')}
+                                                        </span>
+                                                    )}
                                                 </p>
                                             </div>
+                                        </div>
+                                        <div className="flex gap-2">
+                                            {!resume.is_analyzed && (
+                                                <Button
+                                                    size="sm"
+                                                    variant="outline"
+                                                    onClick={() => handleAnalyze(resume.id)}
+                                                    disabled={analyzeMutation.isPending}
+                                                >
+                                                    {analyzeMutation.isPending ? (
+                                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                                    ) : (
+                                                        'Analyze with AI'
+                                                    )}
+                                                </Button>
+                                            )}
+                                            <Button
+                                                size="sm"
+                                                variant="destructive"
+                                                onClick={() => handleDelete(resume.id)}
+                                                disabled={deleteMutation.isPending}
+                                            >
+                                                {deleteMutation.isPending ? (
+                                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                                ) : (
+                                                    'Delete'
+                                                )}
+                                            </Button>
                                         </div>
                                     </div>
                                 ))}

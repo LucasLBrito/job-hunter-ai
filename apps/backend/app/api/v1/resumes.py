@@ -98,6 +98,31 @@ async def read_resume(
         raise HTTPException(status_code=403, detail="Not enough permissions")
     return resume
 
+@router.post("/{resume_id}/analyze", response_model=schemas.ResumeResponse)
+async def analyze_resume(
+    *,
+    db: AsyncSession = Depends(deps.get_db),
+    resume_id: int,
+    background_tasks: BackgroundTasks,
+    current_user = Depends(deps.get_current_active_user),
+) -> Any:
+    """
+    Trigger AI analysis for a resume.
+    """
+    resume = await crud.resume.get(db=db, id=resume_id)
+    if not resume:
+        raise HTTPException(status_code=404, detail="Resume not found")
+    if resume.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not enough permissions")
+    
+    # Trigger analysis in background
+    from app.services.analyzer import ResumeAnalyzer
+    resume_analyzer = ResumeAnalyzer()
+    background_tasks.add_task(resume_analyzer.process_resume_task, resume.id, db)
+    
+    return resume
+
+
 @router.delete("/{resume_id}", response_model=schemas.ResumeResponse)
 async def delete_resume(
     *,

@@ -59,8 +59,32 @@ class JobService:
                     
                     new_job = await crud_job.create(self.db, obj_in=job_in)
                     
-                    # FUTURE: Trigger "Deep Search"/"Deep Analysis" here
-                    # e.g., await self.analyze_job_relevance(new_job)
+                    # Generate & Store Embedding (Pinecone)
+                    try:
+                        from app.services.embedding_service import EmbeddingService
+                        from app.services.pinecone_service import PineconeService
+                        
+                        embed_text = f"{new_job.title} {new_job.company} {new_job.description or ''}"
+                        
+                        embedding_service = EmbeddingService()
+                        if embedding_service.api_key:
+                            vector = await embedding_service.get_embedding(embed_text)
+                            
+                            pinecone_service = PineconeService()
+                            pinecone_service.upsert_job(
+                                job_id=new_job.id,
+                                embedding=vector,
+                                metadata={
+                                    "title": new_job.title,
+                                    "company": new_job.company,
+                                    "location": new_job.location,
+                                    "is_remote": new_job.is_remote
+                                }
+                            )
+                    except Exception as e:
+                         logger.error(f"Embedding/Pinecone failed for job {new_job.id}: {e}")
+                    
+
                     
                     all_new_jobs.append(new_job)
                     

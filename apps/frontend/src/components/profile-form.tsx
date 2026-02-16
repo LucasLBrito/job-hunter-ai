@@ -56,7 +56,7 @@ export function ProfileForm() {
     const { data: userData, isLoading } = useQuery({
         queryKey: ['me'],
         queryFn: async () => {
-            const res = await api.get('/users/me');
+            const res = await api.get('/auth/me');
             return res.data;
         },
     });
@@ -74,7 +74,7 @@ export function ProfileForm() {
                 ...data,
                 smtp_port: data.smtp_port ? Number(data.smtp_port) : undefined
             };
-            const res = await api.put('/users/me', payload);
+            const res = await api.put('/auth/me', payload);
             return res.data;
         },
         onSuccess: (data) => {

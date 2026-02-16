@@ -33,7 +33,129 @@ async def create_job(
     job = await crud.job.create(db=db, obj_in=job_in)
     return job
 
+# IMPORTANT: Static routes must come BEFORE dynamic path parameter routes
+@router.get("/recommended", response_model=List[schemas.JobResponse])
+async def get_recommended_jobs(
+    db: AsyncSession = Depends(deps.get_db),
+    limit: int = 10,
+    current_user = Depends(deps.get_current_active_user),
+) -> Any:
+    """
+    Get AI-recommended jobs based on user's analyzed resume.
+    Returns jobs sorted by compatibility score.
+    """
+    from sqlalchemy import select, desc
+    from app.models.resume import Resume
+    
+    # Get user's most recent analyzed resume
+    stmt = select(Resume).where(
+        Resume.user_id == current_user.id,
+        Resume.is_analyzed == True
+    ).order_by(desc(Resume.updated_at)).limit(1)
+    
+    result = await db.execute(stmt)
+    resume = result.scalars().first()
+    
+    if not resume:
+        # No analyzed resume - return top jobs
+        jobs = await crud.job.get_multi(db, skip=0, limit=limit)
+        return jobs
+    
+    # Try Pinecone Semantic Search first
+    try:
+        from app.services.pinecone_service import PineconeService
+        from app.services.embedding_service import EmbeddingService
+        import json
+        
+        pinecone_service = PineconeService()
+        if pinecone_service.index:
+            # 1. Try to get existing vector
+            vector = pinecone_service.get_resume_vector(resume.id)
+            
+            # 2. If not found, generate it (on the fly recovery)
+            if not vector:
+                # Parse JSON fields from Resume model
+                # Resume stores: ai_summary (text), technical_skills (JSON string), soft_skills (JSON string)
+                try:
+                    tech_skills = json.loads(resume.technical_skills) if resume.technical_skills else []
+                    soft_skills = json.loads(resume.soft_skills) if resume.soft_skills else []
+                    summary = resume.ai_summary or ""
+                    
+                    embed_text = f"{summary} {' '.join(tech_skills)} {' '.join(soft_skills)}"
+                    
+                    if embed_text.strip():
+                        embedding_service = EmbeddingService()
+                        if embedding_service.api_key:
+                            vector = await embedding_service.get_embedding(embed_text)
+                except Exception as parse_err:
+                    print(f"Error parsing resume data: {parse_err}")
+            
+            # 3. Search
+            if vector:
+                search_results = pinecone_service.search_jobs(query_embedding=vector, top_k=limit)
+                
+                if search_results:
+                    # Get jobs from DB preserving order
+                    job_ids = [res['id'] for res in search_results]
+                    
+                    # Fetch jobs (this might not preserve order depending on DB impl, so we re-sort)
+                    # For simplicity, let's fetch matching jobs and manual sort
+                    # Or use a WHERE IN clause.
+                    from app.models.job import Job
+                    stmt = select(Job).where(Job.id.in_(job_ids))
+                    db_res = await db.execute(stmt)
+                    jobs_map = {job.id: job for job in db_res.scalars().all()}
+                    
+                    ordered_jobs = []
+                    for res in search_results:
+                        job = jobs_map.get(res['id'])
+                        if job:
+                            job.compatibility_score = int(res['score'] * 100) # Pinecone score is 0-1 (cosine)
+                            ordered_jobs.append(job)
+                            
+                    return ordered_jobs
+    except Exception as e:
+        # Log error and fall back to keyword matching
+        import traceback
+        print(f"Pinecone search failed: {e}")
+        print(traceback.format_exc())
+        pass
+
+    # Fallback: Keyword Matching (Old Logic)
+    all_jobs = await crud.job.get_multi(db, skip=0, limit=100)
+    
+    if not all_jobs:
+        return []
+    
+    # Extract skills from resume for matching
+    try:
+        import json
+        resume_skills = json.loads(resume.technical_skills) if resume.technical_skills else []
+        if not resume_skills:
+            resume_skills = json.loads(resume.soft_skills) if resume.soft_skills else []
+    except:
+        resume_skills = []
+         
+    # Score each job
+    scored_jobs = []
+    for job in all_jobs:
+        job_text = f"{job.title} {job.description or ''}".lower()
+        
+        # Calculate keyword match score
+        match_count = sum(1 for skill in resume_skills if str(skill).lower() in job_text)
+        score = (match_count / max(len(resume_skills), 1)) * 100 if resume_skills else 0
+        
+        # Set compatibility score
+        job.compatibility_score = min(int(score), 95)
+        scored_jobs.append(job)
+    
+    # Sort by score descending
+    scored_jobs.sort(key=lambda x: x.compatibility_score or 0, reverse=True)
+    
+    return scored_jobs[:limit]
+
 @router.get("/{job_id}", response_model=schemas.JobResponse)
+
 async def read_job(
     *,
     db: AsyncSession = Depends(deps.get_db),
@@ -173,3 +295,124 @@ async def analyze_job_fit(
     job.cons = analysis.get("cons", [])
     
     return job
+
+
+@router.get("/recommended", response_model=List[schemas.JobResponse])
+async def get_recommended_jobs(
+    db: AsyncSession = Depends(deps.get_db),
+    limit: int = 10,
+    current_user = Depends(deps.get_current_active_user),
+) -> Any:
+    """
+    Get AI-recommended jobs based on user's analyzed resume.
+    Returns jobs sorted by compatibility score.
+    """
+    from sqlalchemy import select, desc
+    from app.models.resume import Resume
+    
+    # Get user's most recent analyzed resume
+    stmt = select(Resume).where(
+        Resume.user_id == current_user.id,
+        Resume.is_analyzed == True
+    ).order_by(desc(Resume.updated_at)).limit(1)
+    
+    result = await db.execute(stmt)
+    resume = result.scalars().first()
+    
+    if not resume:
+        # No analyzed resume - return top jobs
+        jobs = await crud.job.get_multi(db, skip=0, limit=limit)
+        return jobs
+    
+    # Try Pinecone Semantic Search first
+    try:
+        from app.services.pinecone_service import PineconeService
+        from app.services.embedding_service import EmbeddingService
+        import json
+        
+        pinecone_service = PineconeService()
+        if pinecone_service.index:
+            # 1. Try to get existing vector
+            vector = pinecone_service.get_resume_vector(resume.id)
+            
+            # 2. If not found, generate it (on the fly recovery)
+            if not vector:
+                # Parse JSON fields from Resume model
+                # Resume stores: ai_summary (text), technical_skills (JSON string), soft_skills (JSON string)
+                try:
+                    tech_skills = json.loads(resume.technical_skills) if resume.technical_skills else []
+                    soft_skills = json.loads(resume.soft_skills) if resume.soft_skills else []
+                    summary = resume.ai_summary or ""
+                    
+                    embed_text = f"{summary} {' '.join(tech_skills)} {' '.join(soft_skills)}"
+                    
+                    if embed_text.strip():
+                        embedding_service = EmbeddingService()
+                        if embedding_service.api_key:
+                            vector = await embedding_service.get_embedding(embed_text)
+                except Exception as parse_err:
+                    print(f"Error parsing resume data: {parse_err}")
+            
+            # 3. Search
+            if vector:
+                search_results = pinecone_service.search_jobs(query_embedding=vector, top_k=limit)
+                
+                if search_results:
+                    # Get jobs from DB preserving order
+                    job_ids = [res['id'] for res in search_results]
+                    
+                    # Fetch jobs (this might not preserve order depending on DB impl, so we re-sort)
+                    # For simplicity, let's fetch matching jobs and manual sort
+                    # Or use a WHERE IN clause.
+                    from app.models.job import Job
+                    stmt = select(Job).where(Job.id.in_(job_ids))
+                    db_res = await db.execute(stmt)
+                    jobs_map = {job.id: job for job in db_res.scalars().all()}
+                    
+                    ordered_jobs = []
+                    for res in search_results:
+                        job = jobs_map.get(res['id'])
+                        if job:
+                            job.compatibility_score = int(res['score'] * 100) # Pinecone score is 0-1 (cosine)
+                            ordered_jobs.append(job)
+                            
+                    return ordered_jobs
+    except Exception as e:
+        # Log error and fall back to keyword matching
+        import traceback
+        print(f"Pinecone search failed: {e}")
+        print(traceback.format_exc())
+        pass
+
+    # Fallback: Keyword Matching (Old Logic)
+    all_jobs = await crud.job.get_multi(db, skip=0, limit=100)
+    
+    if not all_jobs:
+        return []
+    
+    # Extract skills from resume for matching
+    try:
+        import json
+        resume_skills = json.loads(resume.technical_skills) if resume.technical_skills else []
+        if not resume_skills:
+            resume_skills = json.loads(resume.soft_skills) if resume.soft_skills else []
+    except:
+        resume_skills = []
+         
+    # Score each job
+    scored_jobs = []
+    for job in all_jobs:
+        job_text = f"{job.title} {job.description or ''}".lower()
+        
+        # Calculate keyword match score
+        match_count = sum(1 for skill in resume_skills if str(skill).lower() in job_text)
+        score = (match_count / max(len(resume_skills), 1)) * 100 if resume_skills else 0
+        
+        # Set compatibility score
+        job.compatibility_score = min(int(score), 95)
+        scored_jobs.append(job)
+    
+    # Sort by score descending
+    scored_jobs.sort(key=lambda x: x.compatibility_score or 0, reverse=True)
+    
+    return scored_jobs[:limit]

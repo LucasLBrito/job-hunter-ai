@@ -120,3 +120,19 @@ async def test_token(current_user: User = Depends(get_current_active_user)):
     Returns current user if token is valid
     """
     return current_user
+
+
+@router.put("/me", response_model=UserResponse)
+async def update_me(
+    user_update: schemas.UserUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """
+    Update current user profile
+    
+    Requires authentication token
+    """
+    updated_user = await crud_user.update(db, db_obj=current_user, obj_in=user_update)
+    return updated_user
+

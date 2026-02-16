@@ -8,6 +8,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useQuery } from '@tanstack/react-query';
 import api from '@/lib/api';
 import { Loader2 } from 'lucide-react';
+import RecommendedJobs from '@/components/recommended-jobs';
+import PreferencesPrompt from '@/components/preferences-prompt';
 
 export default function DashboardPage() {
     const router = useRouter();
@@ -86,6 +88,12 @@ export default function DashboardPage() {
                             </CardContent>
                         </Card>
                     </div>
+
+                    {/* Preferences Prompt */}
+                    <PreferencesPrompt />
+
+                    {/* Recommended Jobs */}
+                    <RecommendedJobs />
 
                     <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
                         <Card>

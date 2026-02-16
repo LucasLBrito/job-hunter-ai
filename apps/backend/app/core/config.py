@@ -61,6 +61,11 @@ class Settings(BaseSettings):
     SCRAPER_RATE_LIMIT_DELAY: int = 2
     CACHE_TTL_HOURS: int = 24
     
+    # Pinecone Vector DB
+    PINECONE_API_KEY: Optional[str] = None
+    PINECONE_INDEX_NAME: str = "job-hunter-ai"
+    PINECONE_ENV: str = "us-east-1"  # Optional, depending on Pinecone version
+    
     # Agent Settings
     AGENT_MAX_ITERATIONS: int = 100
     AGENT_TIMEOUT_SECONDS: int = 300
