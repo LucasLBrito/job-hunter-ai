@@ -1,7 +1,7 @@
 import sqlite3
 import os
 
-db_path = os.path.join("apps", "backend", "data", "database.db")
+db_path = os.path.join("local_database", "database.db")
 
 if not os.path.exists(db_path):
     print(f"DATABASE NOT FOUND at {db_path}")
