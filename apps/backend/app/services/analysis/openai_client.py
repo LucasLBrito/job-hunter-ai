@@ -54,3 +54,37 @@ class OpenAIClient:
         except Exception as e:
             logger.error(f"Error analyzing resume with OpenAI: {e}")
             raise e
+
+    async def analyze_text(self, prompt: str) -> Dict[str, Any]:
+        """
+        Generic text analysis execution.
+        """
+        if not self.client:
+            raise ValueError("OpenAI API not configured")
+            
+        try:
+            response = await self.client.chat.completions.create(
+                model=self.model_name,
+                messages=[
+                    {"role": "system", "content": "You are a helpful assistant. Output valid JSON."},
+                    {"role": "user", "content": prompt}
+                ],
+                response_format={"type": "json_object"},
+                temperature=0.1
+            )
+            
+            content = response.choices[0].message.content
+            if not content:
+                raise ValueError("Empty response from OpenAI")
+                
+            try:
+                data = json.loads(content)
+                return data
+            except json.JSONDecodeError:
+                logger.error(f"Failed to parse JSON from OpenAI response: {content}")
+                return {"_raw": content, "error": "JSON parse failed"}
+                
+        except Exception as e:
+            logger.error(f"Error analyzing text with OpenAI: {e}")
+            raise e
+

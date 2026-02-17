@@ -15,14 +15,16 @@ export default function ResumesPage() {
     const [file, setFile] = useState<File | null>(null);
     const [description, setDescription] = useState('');
     const [error, setError] = useState('');
+    const [expandedResumeId, setExpandedResumeId] = useState<number | null>(null);
 
-    // Fetch existing resumes
+    // Fetch existing resumes with polling to update analysis status
     const { data: resumes, isLoading, refetch } = useQuery({
         queryKey: ['resumes'],
         queryFn: async () => {
             const res = await api.get('/resumes/');
             return res.data;
-        }
+        },
+        refetchInterval: 3000 // Poll every 3 seconds to check for completed analysis
     });
 
     // Upload resume mutation
@@ -221,53 +223,117 @@ export default function ResumesPage() {
                                 {resumes?.map((resume: any) => (
                                     <div
                                         key={resume.id}
-                                        className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50"
+                                        className="border rounded-lg p-4 hover:bg-gray-50 transition-colors"
                                     >
-                                        <div className="flex items-center gap-3">
-                                            <FileText className="h-5 w-5 text-blue-500" />
-                                            <div>
-                                                <p className="font-medium">
-                                                    {resume.description || resume.filename}
-                                                </p>
-                                                <p className="text-sm text-gray-500">
-                                                    Uploaded: {new Date(resume.created_at).toLocaleDateString()}
-                                                    {resume.is_analyzed && ' • ✓ Analyzed'}
-                                                    {!resume.is_analyzed && resume.ai_summary?.startsWith('ERROR:') && (
-                                                        <span className="text-red-500 ml-2">
-                                                            • ⚠️ {resume.ai_summary.replace('ERROR:', '')}
-                                                        </span>
-                                                    )}
-                                                </p>
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-3">
+                                                <FileText className="h-5 w-5 text-blue-500" />
+                                                <div>
+                                                    <p className="font-medium">
+                                                        {resume.description || resume.filename}
+                                                    </p>
+                                                    <p className="text-sm text-gray-500">
+                                                        Uploaded: {new Date(resume.created_at).toLocaleDateString()}
+                                                        {resume.is_analyzed && ' • ✓ Analyzed'}
+                                                        {!resume.is_analyzed && resume.ai_summary?.startsWith('ERROR:') && (
+                                                            <span className="text-red-500 ml-2">
+                                                                • ⚠️ {resume.ai_summary.replace('ERROR:', '')}
+                                                            </span>
+                                                        )}
+                                                    </p>
+                                                </div>
                                             </div>
-                                        </div>
-                                        <div className="flex gap-2">
-                                            {!resume.is_analyzed && (
+                                            <div className="flex gap-2">
+                                                {resume.is_analyzed && (
+                                                    <Button
+                                                        size="sm"
+                                                        variant="outline"
+                                                        onClick={() => setExpandedResumeId(expandedResumeId === resume.id ? null : resume.id)}
+                                                    >
+                                                        {expandedResumeId === resume.id ? 'Hide Details' : 'View Details'}
+                                                    </Button>
+                                                )}
+                                                {!resume.is_analyzed && (
+                                                    <Button
+                                                        size="sm"
+                                                        variant="outline"
+                                                        onClick={() => handleAnalyze(resume.id)}
+                                                        disabled={analyzeMutation.isPending}
+                                                    >
+                                                        {analyzeMutation.isPending && analyzeMutation.variables === resume.id ? (
+                                                            <>
+                                                                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                                                                Analyzing...
+                                                            </>
+                                                        ) : (
+                                                            'Analyze with AI'
+                                                        )}
+                                                    </Button>
+                                                )}
                                                 <Button
                                                     size="sm"
-                                                    variant="outline"
-                                                    onClick={() => handleAnalyze(resume.id)}
-                                                    disabled={analyzeMutation.isPending}
+                                                    variant="destructive"
+                                                    onClick={() => handleDelete(resume.id)}
+                                                    disabled={deleteMutation.isPending}
                                                 >
-                                                    {analyzeMutation.isPending ? (
+                                                    {deleteMutation.isPending ? (
                                                         <Loader2 className="h-4 w-4 animate-spin" />
                                                     ) : (
-                                                        'Analyze with AI'
+                                                        'Delete'
                                                     )}
                                                 </Button>
-                                            )}
-                                            <Button
-                                                size="sm"
-                                                variant="destructive"
-                                                onClick={() => handleDelete(resume.id)}
-                                                disabled={deleteMutation.isPending}
-                                            >
-                                                {deleteMutation.isPending ? (
-                                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                                ) : (
-                                                    'Delete'
-                                                )}
-                                            </Button>
+                                            </div>
                                         </div>
+
+                                        {/* Expandable Details */}
+                                        {expandedResumeId === resume.id && resume.is_analyzed && (
+                                            <div className="mt-4 pt-4 border-t border-gray-200">
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                    <div>
+                                                        <h4 className="font-semibold text-sm mb-2 text-blue-600">AI Summary</h4>
+                                                        <p className="text-sm text-gray-700 whitespace-pre-line">{resume.ai_summary}</p>
+                                                    </div>
+                                                    <div>
+                                                        <h4 className="font-semibold text-sm mb-2 text-blue-600">Overview</h4>
+                                                        <div className="text-sm space-y-1">
+                                                            <p><span className="font-medium">Experience:</span> {resume.years_of_experience} years</p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <div className="mt-4">
+                                                    <h4 className="font-semibold text-sm mb-2 text-blue-600">Technical Skills</h4>
+                                                    <div className="flex flex-wrap gap-1">
+                                                        {(() => {
+                                                            try {
+                                                                const skills = JSON.parse(resume.technical_skills || '[]');
+                                                                return skills.length ? skills.map((s: string, i: number) => (
+                                                                    <span key={i} className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                                                                        {s}
+                                                                    </span>
+                                                                )) : <span className="text-gray-500 text-sm">No skills detected</span>;
+                                                            } catch (e) { return <span className="text-red-500 text-xs">Error parsing skills</span> }
+                                                        })()}
+                                                    </div>
+                                                </div>
+
+                                                <div className="mt-4">
+                                                    <h4 className="font-semibold text-sm mb-2 text-blue-600">Soft Skills</h4>
+                                                    <div className="flex flex-wrap gap-1">
+                                                        {(() => {
+                                                            try {
+                                                                const skills = JSON.parse(resume.soft_skills || '[]');
+                                                                return skills.length ? skills.map((s: string, i: number) => (
+                                                                    <span key={i} className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+                                                                        {s}
+                                                                    </span>
+                                                                )) : <span className="text-gray-500 text-sm">None detected</span>;
+                                                            } catch (e) { return null }
+                                                        })()}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
                                 ))}
                             </div>

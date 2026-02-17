@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Search, Loader2 } from 'lucide-react';
+import { Search, Loader2, Sparkles } from 'lucide-react';
 import api from '@/lib/api';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -12,6 +12,30 @@ export default function JobsPage() {
     const [query, setQuery] = useState('');
     const [limit, setLimit] = useState(10);
     const queryClient = useQueryClient();
+
+    // Fetch suggestions (resume data)
+    const { data: suggestionsData } = useQuery({
+        queryKey: ['preferences-suggestions'],
+        queryFn: async () => {
+            // We use the same endpoint as preferences to get resume insights
+            const res = await api.get('/users/me/preferences/suggestions');
+            return res.data;
+        },
+        retry: false,
+        staleTime: 1000 * 60 * 5 // 5 minutes
+    });
+
+    // Auto-fill query from resume if available and query is empty
+    useEffect(() => {
+        if (suggestionsData?.suggestions?.job_titles?.length && !query) {
+            // Take the first inferred job title
+            const suggestedTitle = suggestionsData.suggestions.job_titles[0];
+            setQuery(suggestedTitle);
+            // Verify if we should auto-search? Maybe better to let user click search.
+            // But user said "interfira... na pesquisa". 
+            // Let's at least show a toast or indication?
+        }
+    }, [suggestionsData]);
 
     // 1. Search Mutation (Triggers Scraper)
     const searchMutation = useMutation({

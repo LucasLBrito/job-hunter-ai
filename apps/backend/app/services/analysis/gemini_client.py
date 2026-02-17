@@ -127,3 +127,60 @@ class GeminiClient:
         except Exception as e:
             logger.error(f"Error analyzing resume with Gemini ({getattr(self, 'model_name', 'unknown')}): {e}")
             raise
+
+    async def analyze_text(self, prompt: str) -> Dict[str, Any]:
+        """
+        Generic text analysis execution.
+        """
+        if not self.model:
+            raise ValueError("Gemini API not configured")
+            
+        try:
+            # Use the correct async method for Gemini with retry logic
+            max_retries = 3
+            base_delay = 2
+            response = None
+            
+            for attempt in range(max_retries):
+                try:
+                    response = await self.model.generate_content_async(prompt)
+                    break
+                except Exception as e:
+                    if "429" in str(e):
+                        if attempt < max_retries - 1:
+                            delay = base_delay * (2 ** attempt)
+                            logger.warning(f"Rate limit hit (429). Retrying in {delay}s...")
+                            import asyncio
+                            await asyncio.sleep(delay)
+                            continue
+                        else:
+                            logger.error(f"Rate limit exceeded after {max_retries} attempts.")
+                            raise
+                    else:
+                        raise
+            
+            if not response or not response.text:
+                raise ValueError("Empty response from Gemini")
+                        
+            # Clean up response text to ensure valid JSON
+            response_text = response.text.strip()
+            if response_text.startswith("```json"):
+                response_text = response_text[7:]
+            if response_text.startswith("```"):
+                response_text = response_text[3:]
+            if response_text.endswith("```"):
+                response_text = response_text[:-3]
+            response_text = response_text.strip()
+                
+            try:
+                data = json.loads(response_text)
+                return data
+            except json.JSONDecodeError:
+                # Try simple clean if failed
+                logger.error(f"Failed to parse JSON from Gemini response: {response_text[:200]}")
+                return {"_raw": response_text, "error": "JSON parse failed"}
+            
+        except Exception as e:
+            logger.error(f"Error analyzing text with Gemini ({getattr(self, 'model_name', 'unknown')}): {e}")
+            raise
+
