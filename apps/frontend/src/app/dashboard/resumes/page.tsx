@@ -89,7 +89,8 @@ export default function ResumesPage() {
                 // Optionally redirect
                 // router.push('/login');
             } else {
-                setError(err.response?.data?.detail || 'Analysis failed.');
+                const errorMessage = err.response?.data?.detail || 'Analysis failed. Please try again.';
+                setError(errorMessage);
             }
         }
     });

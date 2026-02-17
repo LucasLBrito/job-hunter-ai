@@ -7,136 +7,147 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app import crud, schemas
 from app.services.extraction.local import LocalTextExtractor
 from app.services.analysis.gemini_client import GeminiClient
+from app.services.analysis.openai_client import OpenAIClient
+from app.database import AsyncSessionLocal
 
 logger = logging.getLogger(__name__)
 
 class ResumeAnalyzer:
     """
     Orchestrator service for Resume Analysis.
-    Combines Text Extraction (Local) + AI Analysis (Gemini).
+    Combines Text Extraction (Local) + AI Analysis (Gemini/OpenAI).
     """
     
     def __init__(self):
         self.extractor = LocalTextExtractor()
-        self.ai = GeminiClient()
+        self.gemini = GeminiClient()
+        self.openai = OpenAIClient()
         
-    async def process_resume_task(self, resume_id: int, db: AsyncSession):
+    async def process_resume_task(self, resume_id: int, db: AsyncSession = None):
         """
         Background task to process a resume.
-        1. Get resume from DB.
-        2. Extract text from file.
-        3. Send text to LLM for analysis.
-        4. Update DB with results.
+        Creates its own DB session for background execution.
         """
         logger.info(f"Starting analysis for resume {resume_id}")
         
+        # Create a new session for background task (request session may be closed)
+        async with AsyncSessionLocal() as session:
+            try:
+                await self._do_analysis(resume_id, session)
+            except Exception as e:
+                logger.error(f"Unexpected error in process_resume_task for {resume_id}: {e}")
+    
+    async def _do_analysis(self, resume_id: int, db: AsyncSession):
+        """Core analysis logic with its own DB session."""
+        
+        # 1. Get Resume
+        resume = await crud.resume.get(db=db, id=resume_id)
+        if not resume:
+            logger.error(f"Resume {resume_id} not found during background task")
+            return
+
+        # 2. Extract Text
         try:
-            # 1. Get Resume
-            resume = await crud.resume.get(db=db, id=resume_id)
-            if not resume:
-                logger.error(f"Resume {resume_id} not found during background task")
-                return
+            raw_text = await self.extractor.extract_text(Path(resume.file_path))
+            if not raw_text or len(raw_text) < 50:
+                logger.warning(f"Extracted text for resume {resume_id} is too short or empty.")
+        except Exception as e:
+            logger.error(f"Extraction failed for resume {resume_id}: {e}")
+            return
 
-            # 2. Extract Text
+        # 3. AI Analysis
+        ai_data = {}
+        analysis_successful = False
+        
+        # Try Gemini First
+        if self.gemini.model:
             try:
-                raw_text = await self.extractor.extract_text(Path(resume.file_path))
-                if not raw_text or len(raw_text) < 50:
-                    logger.warning(f"Extracted text for resume {resume_id} is too short or empty.")
+                logger.info(f"Sending resume {resume_id} text to Gemini...")
+                ai_data = await self.gemini.analyze_resume(raw_text)
+                analysis_successful = True
+                logger.info(f"Gemini analysis successful for resume {resume_id}")
             except Exception as e:
-                logger.error(f"Extraction failed for resume {resume_id}: {e}")
-                return
+                logger.error(f"Gemini Analysis failed for resume {resume_id}: {e}")
+        else:
+            logger.warning("Gemini not configured or failed to initialize.")
 
-            # 3. AI Analysis
-            ai_data = {}
-            if self.ai.model:
+        # Fallback to OpenAI if Gemini failed
+        if not analysis_successful:
+            if self.openai.client:
                 try:
-                    logger.info(f"Sending resume {resume_id} text to Gemini...")
-                    ai_data = await self.ai.analyze_resume(raw_text)
+                    logger.info(f"Fallback: Sending resume {resume_id} text to OpenAI...")
+                    ai_data = await self.openai.analyze_resume(raw_text)
+                    analysis_successful = True
+                    logger.info(f"OpenAI analysis successful for resume {resume_id}")
                 except Exception as e:
-                    logger.error(f"AI Analysis failed for resume {resume_id}: {e}")
+                    logger.error(f"OpenAI Analysis failed for resume {resume_id}: {e}")
             else:
-                logger.warning("Gemini not configured. Skipping AI analysis.")
+                logger.warning("OpenAI not configured. Skipping fallback.")
+        
+        if not analysis_successful:
+            logger.error("All AI services failed to analyze the resume.")
 
-            # 4. Generate & Store Embedding (Pinecone)
-            try:
-                from app.services.embedding_service import EmbeddingService
-                from app.services.pinecone_service import PineconeService
-                
-                # Check for API key before proceeding (avoid crash if just extracting text)
-                # But we want to fail gracefully
-                
-                # Create text representation for embedding (summary + skills + experience)
-                # Use what we have from AI, or raw text if AI failed but we want semantic search on raw text
-                # Ideally use structured data if available.
-                
-                embed_text = ""
-                if ai_data:
-                    embed_text = f"{ai_data.get('ai_summary', '')} {' '.join(ai_data.get('technical_skills', []))} {' '.join(ai_data.get('soft_skills', []))}"
-                else:
-                    embed_text = raw_text[:8000] # Truncate for embedding model limit if needed
-                
-                if embed_text:
-                    # Generate embedding
-                    embedding_service = EmbeddingService()
-                    if embedding_service.api_key:
-                        vector = await embedding_service.get_embedding(embed_text)
-                        
-                        # Upsert to Pinecone
-                        pinecone_service = PineconeService()
-                        pinecone_service.upsert_resume(
-                            resume_id=resume.id,
-                            embedding=vector,
-                            metadata={
-                                "user_id": resume.user_id,
-                                "skills": ai_data.get('technical_skills', []) if ai_data else [],
-                                "filename": resume.filename
-                            }
-                        )
-            except Exception as e:
-                logger.error(f"Embedding/Pinecone failed for resume {resume_id}: {e}")
-                # Don't throw, continue to save DB record
-
-            # 5. Prepare Update Data
-            ai_data = ai_data or {} # Ensure it's a dict if None
-            has_data = bool(ai_data and not ai_data.get('error'))
+        # 4. Generate & Store Embedding (Pinecone) - optional
+        try:
+            from app.services.embedding_service import EmbeddingService
+            from app.services.pinecone_service import PineconeService
             
-            if has_data:
-                update_data = schemas.ResumeUpdate(
-                    raw_text=raw_text,
-                    structured_data=json.dumps(ai_data),
-                    is_analyzed=True,
-                    ai_summary=ai_data.get("ai_summary"),
-                    years_of_experience=ai_data.get("years_of_experience"),
-                    technical_skills=json.dumps(ai_data.get("technical_skills", [])),
-                    soft_skills=json.dumps(ai_data.get("soft_skills", [])),
-                    education=json.dumps(ai_data.get("education", [])),
-                    work_experience=json.dumps(ai_data.get("work_experience", [])),
-                    certifications=json.dumps(ai_data.get("certifications", []))
-                )
-                await crud.resume.update(db=db, db_obj=resume, obj_in=update_data)
-                
-                resume.analyzed_at = datetime.utcnow()
-                await db.commit()
-                logger.info(f"Successfully analyzed resume {resume_id}")
+            embed_text = ""
+            if ai_data:
+                embed_text = f"{ai_data.get('ai_summary', '')} {' '.join(ai_data.get('technical_skills', []))} {' '.join(ai_data.get('soft_skills', []))}"
             else:
-                # Save error state
-                # We use ai_summary to store the error if analysis failed completely
-                # This allows frontend to see something went wrong
-                error_msg = f"ERROR: Analysis failed. Please try again. (Details: {ai_data.get('error', 'Unknown error')})"
-                
-                update_data = schemas.ResumeUpdate(
-                    raw_text=raw_text,
-                    ai_summary=error_msg,
-                    is_analyzed=False 
-                )
-                await crud.resume.update(db=db, db_obj=resume, obj_in=update_data)
-                await db.commit()
-                logger.warning(f"Analysis failed for resume {resume_id}. Error saved to summary.")
-
+                embed_text = raw_text[:8000]
+            
+            if embed_text:
+                embedding_service = EmbeddingService()
+                if embedding_service.api_key:
+                    vector = await embedding_service.get_embedding(embed_text)
+                    
+                    pinecone_service = PineconeService()
+                    pinecone_service.upsert_resume(
+                        resume_id=resume.id,
+                        embedding=vector,
+                        metadata={
+                            "user_id": resume.user_id,
+                            "skills": ai_data.get('technical_skills', []) if ai_data else [],
+                            "filename": resume.filename
+                        }
+                    )
         except Exception as e:
-            logger.error(f"Unexpected error in process_resume_task for {resume_id}: {e}")
+            logger.warning(f"Embedding/Pinecone skipped for resume {resume_id}: {e}")
 
-        except Exception as e:
-            logger.error(f"Unexpected error in process_resume_task for {resume_id}: {e}")
+        # 5. Prepare Update Data
+        ai_data = ai_data or {}
+        has_data = bool(ai_data and not ai_data.get('error'))
+        
+        if has_data:
+            update_data = schemas.ResumeUpdate(
+                raw_text=raw_text,
+                structured_data=json.dumps(ai_data),
+                is_analyzed=True,
+                ai_summary=ai_data.get("ai_summary"),
+                years_of_experience=ai_data.get("years_of_experience"),
+                technical_skills=json.dumps(ai_data.get("technical_skills", [])),
+                soft_skills=json.dumps(ai_data.get("soft_skills", [])),
+                education=json.dumps(ai_data.get("education", [])),
+                work_experience=json.dumps(ai_data.get("work_experience", [])),
+                certifications=json.dumps(ai_data.get("certifications", []))
+            )
+            await crud.resume.update(db=db, db_obj=resume, obj_in=update_data)
+            
+            resume.analyzed_at = datetime.utcnow()
+            await db.commit()
+            logger.info(f"Successfully analyzed resume {resume_id}")
+        else:
+            error_msg = f"ERROR: Analysis failed. Please try again. (Details: {ai_data.get('error', 'Unknown error')})"
+            
+            update_data = schemas.ResumeUpdate(
+                raw_text=raw_text,
+                ai_summary=error_msg,
+                is_analyzed=False 
+            )
+            await crud.resume.update(db=db, db_obj=resume, obj_in=update_data)
+            await db.commit()
+            logger.warning(f"Analysis failed for resume {resume_id}. Error saved to summary.")
 
 resume_analyzer = ResumeAnalyzer()

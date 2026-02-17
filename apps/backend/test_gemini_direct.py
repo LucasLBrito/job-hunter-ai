@@ -4,8 +4,11 @@ Script para criar um teste direto da análise do Gemini
 import os
 from pathlib import Path
 
-# Force environment reload
-os.environ['GEMINI_API_KEY'] = 'AIzaSyDIBV4C1wWnU7VDQD3Uxr7PD4MGnbsvb0I'
+# Load key from .env.local
+from dotenv import load_dotenv
+load_dotenv('.env.local')
+load_dotenv('.env')
+assert os.getenv('GEMINI_API_KEY'), 'GEMINI_API_KEY not set in .env.local'
 
 print("Testing Gemini API directly...")
 print(f"GEMINI_API_KEY set: {os.environ.get('GEMINI_API_KEY')[:20]}...")

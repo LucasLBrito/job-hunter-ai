@@ -23,20 +23,29 @@ async def get_current_user(
     )
     
     # Decode token
+    print(f"🔍 Validating token: {token[:20]}...")
     payload = decode_access_token(token)
     if payload is None:
+        print(f"❌ TOKEN INVALID: decode returned None")
         raise credentials_exception
     
     user_id: Optional[int] = payload.get("sub")
+    print(f"   Payload sub (user_id): {user_id}")
     if user_id is None:
+        print(f"❌ TOKEN INVALID: no 'sub' in payload")
         raise credentials_exception
     
     # Get user from database
-    user = await crud_user.get(db, id=int(user_id))
-    if user is None:
+    try:
+        user = await crud_user.get(db, id=int(user_id))
+        if user is None:
+            print(f"❌ AUTH FAILED: User ID {user_id} not found in DB")
+            raise credentials_exception
+        print(f"✅ AUTH SUCCESS: User {user.email} authenticated")
+        return user
+    except Exception as e:
+        print(f"❌ AUTH DB ERROR: {str(e)}")
         raise credentials_exception
-    
-    return user
 
 
 async def get_current_active_user(

@@ -27,9 +27,17 @@ async def signup(
     - **password**: Strong password (min 8 characters)
     - **full_name**: Optional full name
     """
+    print(f"\n{'='*60}")
+    print(f"📝 SIGNUP ATTEMPT:")
+    print(f"   Email: {user_in.email}")
+    print(f"   Username: {user_in.username}")
+    print(f"   Full Name: {user_in.full_name}")
+    print(f"{'='*60}\n")
+    
     # Check if email already exists
     existing_user = await crud_user.get_by_email(db, email=user_in.email)
     if existing_user:
+        print(f"❌ SIGNUP FAILED: Email '{user_in.email}' already registered")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Email already registered"
@@ -38,6 +46,7 @@ async def signup(
     # Check if username already exists
     existing_user = await crud_user.get_by_username(db, username=user_in.username)
     if existing_user:
+        print(f"❌ SIGNUP FAILED: Username '{user_in.username}' already taken")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Username already taken"
@@ -61,7 +70,12 @@ async def login(
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: AsyncSession = Depends(get_db)
 ):
-    print(f"DEBUG LOGIN ATTEMPT: username={form_data.username} password_len={len(form_data.password)}")
+    print(f"\n{'='*60}")
+    print(f"🔐 LOGIN ATTEMPT:")
+    print(f"   Username/Email: {form_data.username}")
+    print(f"   Password length: {len(form_data.password)}")
+    print(f"{'='*60}\n")
+    
     """
     OAuth2 compatible token login
     
@@ -78,6 +92,7 @@ async def login(
     )
     
     if not user:
+        print(f"❌ LOGIN FAILED: Invalid credentials for '{form_data.username}'")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email/username or password",

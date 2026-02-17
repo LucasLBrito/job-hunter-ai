@@ -113,6 +113,7 @@ export default function DashboardPage() {
                             <CardContent className="grid grid-cols-2 gap-4">
                                 <Button variant="outline" onClick={() => router.push('/dashboard/jobs')}>Search Jobs</Button>
                                 <Button variant="outline" onClick={() => router.push('/dashboard/resumes')}>Upload Resume</Button>
+                                <Button variant="outline" onClick={() => router.push('/dashboard/preferences')}>🎯 Preferências</Button>
                                 <Button variant="outline" onClick={() => router.push('/dashboard/profile')}>Configure Profile</Button>
                             </CardContent>
                         </Card>

@@ -39,9 +39,12 @@ class CRUDUser:
         await db.refresh(db_user)
         return db_user
 
-    async def update(self, db: AsyncSession, *, db_obj: User, obj_in: UserUpdate) -> User:
-        """Update user profile"""
-        update_data = obj_in.model_dump(exclude_unset=True)
+    async def update(self, db: AsyncSession, *, db_obj: User, obj_in) -> User:
+        """Update user profile. obj_in can be a Pydantic model or a dict."""
+        if isinstance(obj_in, dict):
+            update_data = obj_in
+        else:
+            update_data = obj_in.model_dump(exclude_unset=True)
         for field, value in update_data.items():
             setattr(db_obj, field, value)
         

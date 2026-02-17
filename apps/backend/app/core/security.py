@@ -37,5 +37,7 @@ def decode_access_token(token: str) -> Optional[dict]:
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
         return payload
-    except JWTError:
+    except JWTError as e:
+        print(f"❌ JWT DECODE ERROR: {str(e)}")
+        print(f"   Token start: {token[:10]}...")
         return None

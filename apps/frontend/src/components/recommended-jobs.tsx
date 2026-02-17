@@ -105,7 +105,12 @@ export default function RecommendedJobs() {
                                     <div className="flex items-center gap-2 mb-2">
                                         <h3 className="font-semibold text-lg">{job.title}</h3>
                                         {job.compatibility_score && job.compatibility_score > 0 && (
-                                            <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-700">
+                                            <span className={`px-2 py-1 text-xs font-medium rounded-full ${job.compatibility_score >= 70
+                                                    ? 'bg-green-100 text-green-700'
+                                                    : job.compatibility_score >= 40
+                                                        ? 'bg-yellow-100 text-yellow-700'
+                                                        : 'bg-red-100 text-red-700'
+                                                }`}>
                                                 {Math.round(job.compatibility_score)}% Match
                                             </span>
                                         )}

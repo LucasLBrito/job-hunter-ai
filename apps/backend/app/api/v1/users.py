@@ -1,15 +1,96 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import Any, List
+from sqlalchemy import select, desc
+from typing import Any, List, Dict
 import json
 
 from app.database import get_db
 from app.api.deps import get_current_active_user
 from app.models.user import User
+from app.models.resume import Resume
 from app.schemas.user import UserResponse, UserPreferencesUpdate
 from app.crud import user as crud_user
 
 router = APIRouter()
+
+
+@router.get("/me/preferences/suggestions")
+async def get_preference_suggestions(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+) -> Dict[str, Any]:
+    """
+    Get AI-suggested preferences from the user's latest analyzed resume.
+    Used to pre-fill the preferences form.
+    """
+    # Find the user's most recent analyzed resume
+    stmt = select(Resume).where(
+        Resume.user_id == current_user.id,
+        Resume.is_analyzed == True
+    ).order_by(desc(Resume.analyzed_at)).limit(1)
+
+    result = await db.execute(stmt)
+    resume = result.scalars().first()
+
+    if not resume:
+        return {
+            "has_resume": False,
+            "message": "No analyzed resume found. Upload and analyze a resume first.",
+            "suggestions": {}
+        }
+
+    # Extract suggestions from resume data
+    suggestions = {}
+
+    try:
+        if resume.technical_skills:
+            suggestions["technologies"] = json.loads(resume.technical_skills)
+    except (json.JSONDecodeError, TypeError):
+        suggestions["technologies"] = []
+
+    try:
+        if resume.soft_skills:
+            suggestions["soft_skills"] = json.loads(resume.soft_skills)
+    except (json.JSONDecodeError, TypeError):
+        suggestions["soft_skills"] = []
+
+    # Infer job titles from work experience
+    try:
+        if resume.work_experience:
+            exp = json.loads(resume.work_experience)
+            if isinstance(exp, list):
+                titles = []
+                for entry in exp:
+                    if isinstance(entry, dict):
+                        title = entry.get("title") or entry.get("position") or entry.get("role")
+                        if title and title not in titles:
+                            titles.append(title)
+                suggestions["job_titles"] = titles[:5]
+    except (json.JSONDecodeError, TypeError):
+        pass
+
+    # Infer seniority from years of experience
+    if resume.years_of_experience:
+        yoe = resume.years_of_experience
+        if yoe <= 2:
+            suggestions["seniority_level"] = "Junior"
+        elif yoe <= 5:
+            suggestions["seniority_level"] = "Pleno"
+        elif yoe <= 8:
+            suggestions["seniority_level"] = "Senior"
+        else:
+            suggestions["seniority_level"] = "Lead/Staff"
+
+    suggestions["ai_summary"] = resume.ai_summary
+    suggestions["years_of_experience"] = resume.years_of_experience
+
+    return {
+        "has_resume": True,
+        "resume_id": resume.id,
+        "resume_filename": resume.filename,
+        "suggestions": suggestions
+    }
+
 
 @router.put("/me/preferences", response_model=UserResponse)
 async def update_user_preferences(

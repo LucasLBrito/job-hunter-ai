@@ -108,6 +108,7 @@ async def analyze_resume(
 ) -> Any:
     """
     Trigger AI analysis for a resume.
+    Runs synchronously so errors are properly reported.
     """
     resume = await crud.resume.get(db=db, id=resume_id)
     if not resume:
@@ -115,10 +116,24 @@ async def analyze_resume(
     if resume.user_id != current_user.id:
         raise HTTPException(status_code=403, detail="Not enough permissions")
     
-    # Trigger analysis in background
+    # Run analysis synchronously for better error handling
     from app.services.analyzer import ResumeAnalyzer
-    resume_analyzer = ResumeAnalyzer()
-    background_tasks.add_task(resume_analyzer.process_resume_task, resume.id, db)
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    try:
+        analyzer = ResumeAnalyzer()
+        await analyzer._do_analysis(resume_id, db)
+        
+        # Refresh the resume to get updated data
+        await db.refresh(resume)
+        logger.info(f"Resume {resume_id} analysis completed successfully.")
+    except Exception as e:
+        logger.error(f"Resume analysis failed: {e}")
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Analysis failed: {str(e)}. Check that your Gemini or OpenAI API key is configured."
+        )
     
     return resume
 

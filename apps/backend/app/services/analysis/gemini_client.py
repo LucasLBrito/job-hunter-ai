@@ -10,22 +10,22 @@ logger = logging.getLogger(__name__)
 class GeminiClient:
     """Client for Google Gemini API"""
     
-    def __init__(self):
-        if not settings.GEMINI_API_KEY:
+    def __init__(self, api_key: Optional[str] = None):
+        key = api_key or settings.GEMINI_API_KEY
+        if not key:
             logger.warning("GEMINI_API_KEY not set. AI analysis will be disabled.")
             self.model = None
             return
             
-        genai.configure(api_key=settings.GEMINI_API_KEY)
+        genai.configure(api_key=key)
         self.model = None
         
-        # Try to initialize with available models (Verified via test_gemini.py)
+        # Try to initialize with available models
         models_to_try = [
-            'gemini-2.0-flash', 
+            'gemini-1.5-flash',
             'gemini-flash-latest', 
-            'gemini-1.5-flash', 
             'gemini-pro',
-            'models/gemini-flash-latest'
+            'models/gemini-1.5-flash'
         ]
         
         for model_name in models_to_try:
@@ -50,6 +50,7 @@ class GeminiClient:
             # Use the correct async method for Gemini with retry logic
             max_retries = 3
             base_delay = 2
+            response = None
             
             for attempt in range(max_retries):
                 try:
@@ -65,32 +66,30 @@ class GeminiClient:
                             continue
                         else:
                             logger.error(f"Rate limit exceeded after {max_retries} attempts.")
-                            raise e
-                    # If the first model fails (e.g. 404), try fallback if we haven't already
-                    elif "404" in str(e) and self.model_name != 'gemini-pro':
-                         logger.warning(f"Model {self.model_name} failed with 404, trying gemini-pro")
-                         self.model = genai.GenerativeModel('gemini-pro')
-                         self.model_name = 'gemini-pro'
-                         # Retry immediately with new model
-                         continue
+                            raise
                     else:
-                        raise e
+                        raise
             
+            if not response or not response.text:
+                raise ValueError("Empty response from Gemini")
+                        
             # Clean up response text to ensure valid JSON
             response_text = response.text.strip()
             if response_text.startswith("```json"):
                 response_text = response_text[7:]
+            if response_text.startswith("```"):
+                response_text = response_text[3:]
             if response_text.endswith("```"):
                 response_text = response_text[:-3]
+            response_text = response_text.strip()
                 
             try:
                 data = json.loads(response_text)
                 return data
             except json.JSONDecodeError:
-                logger.error(f"Failed to parse JSON from Gemini response: {response_text}")
-                # Fallback: return raw text in a wrapper
+                logger.error(f"Failed to parse JSON from Gemini response: {response_text[:200]}")
                 return {"_raw": response_text, "error": "JSON parse failed"}
             
         except Exception as e:
-            logger.error(f"Error analyzing resume with Gemini: {e}")
+            logger.error(f"Error analyzing resume with Gemini ({getattr(self, 'model_name', 'unknown')}): {e}")
             raise
