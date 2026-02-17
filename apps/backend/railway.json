@@ -5,7 +5,7 @@
         "buildCommand": "pip install -r railway_requirements.txt"
     },
     "deploy": {
-        "startCommand": "sh scripts/start_prod.sh",
+        "startCommand": "python scripts/start_prod.py",
         "restartPolicyType": "ON_FAILURE",
         "restartPolicyMaxRetries": 10,
         "healthcheckPath": "/health",

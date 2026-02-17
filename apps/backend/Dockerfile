@@ -30,4 +30,4 @@ HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
 
 # Run the application
 # Run the application using shell to allow variable expansion
-CMD ["sh", "scripts/start_prod.sh"]
+CMD ["python", "scripts/start_prod.py"]
