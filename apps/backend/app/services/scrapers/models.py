@@ -16,10 +16,13 @@ class ScrapedJob(BaseModel):
     description: str
     url: str
     external_id: str
-    source_platform: str  # e.g., "remoteok", "linkedin"
+    source_platform: str  # e.g., "remoteok", "linkedin", "indeed"
     posted_at: Optional[datetime] = None
     
     # Optional metadata
     company_url: Optional[str] = None
     logo_url: Optional[str] = None
     technologies: List[str] = []
+    employment_type: Optional[str] = None  # e.g., "Full-time", "Contract"
+    seniority_level: Optional[str] = None  # e.g., "Junior", "Senior"
+

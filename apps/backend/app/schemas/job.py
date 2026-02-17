@@ -10,6 +10,10 @@ class JobSource(str, Enum):
     INDEED = "indeed"
     REMOTEOK = "remoteok"
     GITHUB = "github"
+    GLASSDOOR = "glassdoor"
+    GOOGLE = "google"
+    ZIPRECRUITER = "zip_recruiter"
+    ADZUNA = "adzuna"
     MANUAL = "manual"
 
 

@@ -46,6 +46,10 @@ class Settings(BaseSettings):
     LLM_PROVIDER: str = "openai"  # "openai" or "anthropic"
     LLM_MODEL: str = "gpt-4o-mini"  # or "claude-3-5-sonnet-20241022"
     
+    # Adzuna Job Search API (free at developer.adzuna.com)
+    ADZUNA_APP_ID: Optional[str] = None
+    ADZUNA_APP_KEY: Optional[str] = None
+    
     # Azure Document Intelligence
     AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT: Optional[str] = None
     AZURE_DOCUMENT_INTELLIGENCE_KEY: Optional[str] = None

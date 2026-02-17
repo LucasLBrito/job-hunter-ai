@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import List
+from typing import List, Optional
 from app.services.scrapers.models import ScrapedJob
 import logging
 
