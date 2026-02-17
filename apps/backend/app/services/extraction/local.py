@@ -25,8 +25,9 @@ class LocalTextExtractor(TextExtractor):
                 return self._extract_pdf(file_path)
             elif suffix in ['.docx', '.doc']:
                 return self._extract_docx(file_path)
-            elif suffix == '.txt':
-                return file_path.read_text(encoding='utf-8')
+            elif suffix in ['.txt', '.md', '.markdown']:
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    return f.read()
             else:
                 raise ValueError(f"Unsupported file type: {suffix}")
         except Exception as e:

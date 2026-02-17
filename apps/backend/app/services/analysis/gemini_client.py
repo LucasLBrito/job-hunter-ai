@@ -20,22 +20,56 @@ class GeminiClient:
         genai.configure(api_key=key)
         self.model = None
         
-        # Try to initialize with available models
-        models_to_try = [
-            'gemini-1.5-flash',
-            'gemini-flash-latest', 
-            'gemini-pro',
-            'models/gemini-1.5-flash'
+        # 1. List available models
+        available_models = []
+        try:
+            for m in genai.list_models():
+                if 'generateContent' in m.supported_generation_methods:
+                    available_models.append(m.name)
+            logger.info(f"Available Gemini models: {available_models}")
+        except Exception as e:
+            logger.warning(f"Failed to list Gemini models: {e}")
+            
+        # 2. Select best model
+        # Preference: 1.5 Flash (fast/cheap) -> 1.5 Pro -> Pro -> 1.0
+        preferences = [
+            'models/gemini-1.5-flash',
+            'models/gemini-1.5-pro',
+            'models/gemini-pro',
+            'models/gemini-1.0-pro'
         ]
         
-        for model_name in models_to_try:
-            try:
-                self.model = genai.GenerativeModel(model_name)
-                self.model_name = model_name
-                logger.info(f"Initialized Gemini with model: {model_name}")
+        selected_model = None
+        
+        # Check preferences against available
+        for pref in preferences:
+            if pref in available_models:
+                selected_model = pref
                 break
-            except Exception as e:
-                logger.warning(f"Failed to initialize model {model_name}: {e}")
+                
+        # Fallback: check if short names work (sometimes list_models returns absolute paths)
+        if not selected_model:
+            for pref in preferences:
+                short_name = pref.replace('models/', '')
+                if short_name in available_models:
+                    selected_model = short_name
+                    break
+        
+        # Fallback: take first available
+        if not selected_model and available_models:
+            selected_model = available_models[0]
+            
+        # Hard fallback
+        if not selected_model:
+            selected_model = 'gemini-1.5-flash'
+            
+        try:
+            self.model = genai.GenerativeModel(selected_model)
+            self.model_name = selected_model
+            logger.info(f"Initialized Gemini with model: {selected_model}")
+        except Exception as e:
+            logger.error(f"Failed to initialize Gemini with {selected_model}: {e}")
+            self.model = None
                 
     async def analyze_resume(self, text: str) -> Dict[str, Any]:
         """

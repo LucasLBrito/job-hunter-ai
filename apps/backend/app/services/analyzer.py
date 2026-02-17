@@ -59,30 +59,48 @@ class ResumeAnalyzer:
         ai_data = {}
         analysis_successful = False
         
-        # Try Gemini First
-        if self.gemini.model:
-            try:
-                logger.info(f"Sending resume {resume_id} text to Gemini...")
-                ai_data = await self.gemini.analyze_resume(raw_text)
-                analysis_successful = True
-                logger.info(f"Gemini analysis successful for resume {resume_id}")
-            except Exception as e:
-                logger.error(f"Gemini Analysis failed for resume {resume_id}: {e}")
-        else:
-            logger.warning("Gemini not configured or failed to initialize.")
+        # 3. AI Analysis
+        ai_data = {}
+        analysis_successful = False
+        
+        from app.core.config import settings
+        provider = settings.LLM_PROVIDER.lower()
+        
+        # Function to try Gemini
+        async def try_gemini():
+            if self.gemini.model:
+                try:
+                    logger.info(f"Sending resume {resume_id} text to Gemini...")
+                    return await self.gemini.analyze_resume(raw_text), True
+                except Exception as e:
+                    logger.error(f"Gemini Analysis failed for resume {resume_id}: {e}")
+            else:
+                logger.warning("Gemini not configured.")
+            return {}, False
 
-        # Fallback to OpenAI if Gemini failed
-        if not analysis_successful:
+        # Function to try OpenAI
+        async def try_openai():
             if self.openai.client:
                 try:
-                    logger.info(f"Fallback: Sending resume {resume_id} text to OpenAI...")
-                    ai_data = await self.openai.analyze_resume(raw_text)
-                    analysis_successful = True
-                    logger.info(f"OpenAI analysis successful for resume {resume_id}")
+                    logger.info(f"Sending resume {resume_id} text to OpenAI...")
+                    return await self.openai.analyze_resume(raw_text), True
                 except Exception as e:
                     logger.error(f"OpenAI Analysis failed for resume {resume_id}: {e}")
             else:
-                logger.warning("OpenAI not configured. Skipping fallback.")
+                logger.warning("OpenAI not configured.")
+            return {}, False
+
+        # Logic based on provider
+        if provider == "openai":
+            ai_data, analysis_successful = await try_openai()
+            # Fallback to Gemini if OpenAI fails (optional, maybe not desired if explicit)
+            if not analysis_successful:
+                 ai_data, analysis_successful = await try_gemini()
+        else:
+            # Default/Gemini
+            ai_data, analysis_successful = await try_gemini()
+            if not analysis_successful:
+                ai_data, analysis_successful = await try_openai()
         
         if not analysis_successful:
             logger.error("All AI services failed to analyze the resume.")
