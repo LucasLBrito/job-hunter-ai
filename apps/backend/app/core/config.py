@@ -22,7 +22,9 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     
     # CORS
-    ALLOWED_ORIGINS: List[str] = ["http://localhost:3000", "http://127.0.0.1:3000"]
+    # CORS
+    # Allowing all for production flexibility initially - secure this later!
+    ALLOWED_ORIGINS: List[str] = ["*"]
 
     @field_validator("ALLOWED_ORIGINS", mode="before")
     @classmethod
@@ -35,6 +37,16 @@ class Settings(BaseSettings):
     
     # Database
     DATABASE_URL: str = "sqlite+aiosqlite:///./data/database.db"
+
+    @field_validator("DATABASE_URL", mode="before")
+    @classmethod
+    def assemble_db_connection(cls, v: Optional[str], info) -> Any:
+        if isinstance(v, str):
+            if v.startswith("postgres://"):
+                return v.replace("postgres://", "postgresql+asyncpg://")
+            if v.startswith("postgresql://") and "+asyncpg" not in v:
+                return v.replace("postgresql://", "postgresql+asyncpg://")
+        return v or "sqlite+aiosqlite:///./data/database.db"
     
     # Redis
     REDIS_URL: str = "redis://localhost:6379/0"

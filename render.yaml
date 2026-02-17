@@ -1,0 +1,23 @@
+services:
+  # Backend API
+  - type: web
+    name: jobhunter-backend
+    runtime: python
+    rootDir: .
+    buildCommand: "pip install -r apps/backend/requirements.txt"
+    startCommand: "cd apps/backend && uvicorn app.main:app --host 0.0.0.0 --port $PORT"
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: ENV
+        value: production
+      - key: MODULE_NAME
+        value: app.main
+      - key: VARIABLE_NAME
+        value: app
+      - key: LOG_LEVEL
+        value: info
+    # Environment variables you MUST set in Render Dashboard:
+    # - DATABASE_URL (from Neon/Supabase)
+    # - OPENAI_API_KEY
+    # - SECRET_KEY
