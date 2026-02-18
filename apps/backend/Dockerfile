@@ -18,8 +18,8 @@ RUN pip install --no-cache-dir --upgrade pip && \
 # Copy application code
 COPY . .
 
-# Create directory for uploaded files
-RUN mkdir -p /app/uploads
+# Create directory for uploaded files and data
+RUN mkdir -p /app/uploads /app/data
 
 # Expose port
 EXPOSE 8000
@@ -30,4 +30,4 @@ HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
 
 # Run the application
 # Run the application using shell to allow variable expansion
-CMD ["python", "scripts/start_prod.py"]
+CMD ["python", "-u", "scripts/start_prod.py"]
