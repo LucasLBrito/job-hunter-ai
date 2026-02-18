@@ -21,6 +21,9 @@ COPY . .
 # Create directory for uploaded files and data
 RUN mkdir -p /app/uploads /app/data
 
+# DEBUG: List files to verify script existence
+RUN ls -R /app
+
 # Expose port
 EXPOSE 8000
 
