@@ -5,8 +5,9 @@
         "dockerfilePath": "Dockerfile"
     },
     "deploy": {
+        "startCommand": "python -u scripts/start_prod.py",
         "restartPolicyType": "ON_FAILURE",
-        "restartPolicyMaxRetries": 10,
+        "restartPolicyMaxRetries": 5,
         "healthcheckPath": "/health",
         "healthcheckTimeout": 300
     }

@@ -16,16 +16,27 @@ def main():
         print("[WARNING] asyncpg not found! Installing runtime dependencies...", flush=True)
         subprocess.call([sys.executable, "-m", "pip", "install", "asyncpg", "psycopg2-binary", "greenlet"])
 
-    print("[INFO] Running Alembic Migrations...", flush=True)
+    # Print DATABASE_URL type for debugging (never print actual credentials)
+    db_url = os.getenv("DATABASE_URL", "NOT SET")
+    db_type = db_url.split("://")[0] if "://" in db_url else "unknown"
+    print(f"DEBUG: Database type: {db_type}", flush=True)
+
+    print("[INFO] Running Alembic Migrations (timeout: 60s)...", flush=True)
     try:
         # We use sys.executable to ensure we use the same python interpreter
-        ret = subprocess.call([sys.executable, "-m", "alembic", "upgrade", "head"])
+        # Timeout of 60s prevents hanging if DB is unreachable
+        ret = subprocess.call(
+            [sys.executable, "-m", "alembic", "upgrade", "head"],
+            timeout=60
+        )
         if ret == 0:
             print("[INFO] Migrations SUCCESS.", flush=True)
         else:
             print(f"[ERROR] Migrations failed with exit code {ret}. Continuing to start app anyway...", flush=True)
+    except subprocess.TimeoutExpired:
+        print("[WARNING] Migrations TIMED OUT after 60s (DB may be unreachable). Starting app anyway...", flush=True)
     except Exception as e:
-        print(f"[ERROR] Failed to run migrations: {e}", flush=True)
+        print(f"[ERROR] Failed to run migrations: {e}. Continuing...", flush=True)
 
     # Start Uvicorn
     print(f"[INFO] Executing Uvicorn on 0.0.0.0:{port}", flush=True)
