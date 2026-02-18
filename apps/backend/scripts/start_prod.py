@@ -8,6 +8,14 @@ def main():
     print(f"[INFO] Starting Production Server on Port {port}...")
 
     # Run Database Migrations
+    print("[INFO] Checking critical dependencies...")
+    try:
+        import asyncpg
+        print("[INFO] asyncpg is already installed.")
+    except ImportError:
+        print("[WARNING] asyncpg not found! Installing runtime dependencies...")
+        subprocess.call([sys.executable, "-m", "pip", "install", "asyncpg", "psycopg2-binary", "greenlet"])
+
     print("[INFO] Running Alembic Migrations...")
     try:
         # We use sys.executable to ensure we use the same python interpreter
