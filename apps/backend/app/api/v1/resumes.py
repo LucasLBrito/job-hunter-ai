@@ -76,8 +76,9 @@ async def create_resume(
     )
     
     # 5. Trigger Analysis Background Task
-    from app.services.analyzer import resume_analyzer
-    background_tasks.add_task(resume_analyzer.process_resume_task, resume.id, db)
+    from app.services.analyzer import ResumeAnalyzer
+    analyzer = ResumeAnalyzer()
+    background_tasks.add_task(analyzer.process_resume_task, resume.id, db)
     
     return resume
 

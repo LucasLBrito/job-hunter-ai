@@ -168,4 +168,4 @@ class ResumeAnalyzer:
             await db.commit()
             logger.warning(f"Analysis failed for resume {resume_id}. Error saved to summary.")
 
-resume_analyzer = ResumeAnalyzer()
+
