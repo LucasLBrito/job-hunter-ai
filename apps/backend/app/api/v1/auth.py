@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import timedelta
 from app.database import get_db
 from app.schemas.auth import Token, SignupRequest
-from app.schemas.user import UserResponse
+from app.schemas.user import UserResponse, UserUpdate
 from app.crud import user as crud_user
 from app.core.security import create_access_token
 from app.core.config import settings
@@ -139,7 +139,7 @@ async def test_token(current_user: User = Depends(get_current_active_user)):
 
 @router.put("/me", response_model=UserResponse)
 async def update_me(
-    user_update: schemas.UserUpdate,
+    user_update: UserUpdate,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):

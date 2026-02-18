@@ -266,7 +266,7 @@ async def analyze_job_fit(
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
         
-    resumes = await crud.resume.get_multi_by_owner(db, owner_id=current_user.id, limit=1)
+    resumes = await crud.resume.get_multi_by_owner(db, user_id=current_user.id, limit=1)
     if not resumes:
         raise HTTPException(status_code=400, detail="No resume found for analysis.")
     resume = resumes[0]

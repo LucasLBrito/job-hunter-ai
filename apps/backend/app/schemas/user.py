@@ -16,13 +16,6 @@ class UserBase(BaseModel):
             return v.strip()
         return v
 
-    @field_validator('username', 'email', mode='before')
-    @classmethod
-    def strip_whitespace(cls, v):
-        if isinstance(v, str):
-            return v.strip()
-        return v
-
 
 class UserCreate(UserBase):
     """Schema for user registration"""
