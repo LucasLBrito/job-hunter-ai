@@ -21,11 +21,12 @@ COPY . .
 # Create directory for uploaded files and data
 RUN mkdir -p /app/uploads /app/data
 
-# Expose port
-EXPOSE 8000
+# Expose port - Railway injects PORT env var (usually 8080)
+ENV PORT=8080
+EXPOSE 8080
 
 # Health check
-HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=5 \
     CMD curl -f http://localhost:${PORT:-8000}/health || exit 1
 
 # Run the application
