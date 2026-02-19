@@ -24,7 +24,7 @@ class Settings(BaseSettings):
     # CORS
     # CORS
     # Allowing all for production flexibility initially - secure this later!
-    ALLOWED_ORIGINS: List[str] = ["*"]
+    ALLOWED_ORIGINS: Union[List[str], str] = ["*"]
 
     @field_validator("ALLOWED_ORIGINS", mode="before")
     @classmethod

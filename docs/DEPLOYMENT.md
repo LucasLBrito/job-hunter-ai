@@ -12,104 +12,90 @@ This guide covers how to deploy the Job Hunter AI application and configure the 
 
 ---
 
-## 1. Backend Deployment (Railway)
+## 1. Backend Deployment (Railway) - Step by Step
 
 ### A. Create Project & Database
 1.  Log in to [Railway](https://railway.app/).
 2.  Click **"New Project"** -> **"Provision PostgreSQL"**.
 3.  Once the database is created, click on it and go to the **"Connect"** tab.
-4.  Copy the **"Postgres Connection URL"**.
+4.  Copy the **"Postgres Connection URL"**. It looks like `postgresql://postgres:PASSWORD@roundhouse.proxy.rlwy.net:PORT/railway`.
 
 ### B. Deploy Backend Service
 1.  In the same project, click **"New"** -> **"GitHub Repo"** -> Select `job-hunter-ai`.
 2.  Go to the **"Settings"** of the new service.
-3.  Under **"Build Command"**, ensure it installs dependencies (Railway usually detects `requirements.txt` or `Pipfile`).
+3.  Under **"Build Command"**, ensure it is empty (Railway usually detects `requirements.txt`).
 4.  Under **"Start Command"**, use:
     ```bash
     python apps/backend/scripts/start_prod.py
     ```
-    *Note: This script automatically runs migrations.*
 
 ### C. Environment Variables (Backend)
-Go to the **"Variables"** tab and add the following:
+Go to the **"Variables"** tab and add the following strictly as shown:
 
-| Variable | Value | Description |
+| Variable | Value Example | Description |
 | :--- | :--- | :--- |
 | `PORT` | `8000` | Port for the backend server |
-| `DATABASE_URL` | `postgresql+asyncpg://...` | **IMPORTANT:** Paste the Railway Postgres URL here. **Replace `postgresql://` with `postgresql+asyncpg://` if needed.** |
-| `SECRET_KEY` | `<your-secret-key>` | A strong random string for security |
-| `OPENAI_API_KEY` | `sk-...` | Your OpenAI API Key |
-| `ALLOWED_ORIGINS` | `https://<your-vercel-app>.vercel.app,http://localhost:3000` | Comma-separated list of allowed frontend origins |
+| `DATABASE_URL` | `postgresql+asyncpg://postgres:PASSWORD@roundhouse...` | **IMPORTANT:** Paste the Railway Postgres URL. **YOU MUST REPLACE** `postgresql://` with `postgresql+asyncpg://` at the beginning. |
+| `SECRET_KEY` | `change_this_to_something_random` | A random string for security |
+| `OPENAI_API_KEY` | `sk-...` | Your OpenAI API Key (starts with sk-) |
+| `ALLOWED_ORIGINS` | `*` | **CRITICAL:** Start with `*` or a comma-separated list like `https://myapp.vercel.app,http://localhost:3000`. Do NOT use `["..."]` JSON syntax here unless experienced. |
 
 ---
 
-## 2. Frontend Deployment (Vercel)
+## 2. Frontend Deployment (Vercel) - Step by Step
 
 ### A. Import Project
 1.  Log in to [Vercel](https://vercel.com/).
 2.  Click **"Add New..."** -> **"Project"**.
 3.  Import the `job-hunter-ai` repository.
 
-### B. Configure Project
-1.  **Framework Preset:** Next.js
-2.  **Root Directory:** `apps/frontend` (Edit the root directory setting).
-3.  **Build Command:** `npm run build` (Default)
-4.  **Output Directory:** `.next` (Default)
+### B. Configure Project (SCREEN: "Configure Project")
+1.  **Framework Preset:** Select `Next.js`.
+2.  **Root Directory:** Click "Edit" and select `apps/frontend`.
+3.  **Build Command:** Leave as `npm run build`.
+4.  **Output Directory:** Leave as `.next`.
+5.  **Environment Variables:** Expand this section.
 
 ### C. Environment Variables (Frontend)
-Add the following variables in the "Environment Variables" section:
+Add the following variable:
 
-| Variable | Value | Description |
+| Variable | Value Example | Description |
 | :--- | :--- | :--- |
-| `NEXT_PUBLIC_API_URL` | `https://<your-railway-backend>.up.railway.app/api/v1` | The URL of your deployed backend |
+| `NEXT_PUBLIC_API_URL` | `https://job-hunter-ai-production.up.railway.app/api/v1` | **IMPORTANT:** This is the URL of your Railway Backend Service (get this from Railway -> Settings -> Networking -> Public Domain). Ensure it ends with `/api/v1`. |
 
 ### D. Deploy
 Click **"Deploy"**. Vercel will build and deploy your frontend.
+If you see "Build Error", check the logs. We recently fixed a `useQuery` error (ensure `apps/frontend/src/app/dashboard/profile/page.tsx` has `'use client';` at the top).
 
 ---
 
 ## 3. Local Development (SQLite)
 
-For local development, we use SQLite to avoid the need for a running Postgres instance.
+For local development, use SQLite.
 
 ### A. Backend Setup
 1.  Navigate to `apps/backend`.
-2.  Create a `.env` file (or rename `.env.example`).
-3.  Set `DATABASE_URL` to utilize SQLite:
-    ```ini
-    DATABASE_URL=sqlite+aiosqlite:///./data/database.db
-    ```
-    *Note: The `start_prod.py` script and `config.py` are configured to fall back to this SQLite URL if no simpler URL is provided, but explicit setting is better.*
-4.  Run the backend:
-    ```bash
-    # Install dependencies
-    pip install -r requirements.txt
-    
-    # Run server
-    python app/main.py
+2.  Unique command for Windows PowerShell:
+    ```powershell
+    $env:DATABASE_URL="sqlite+aiosqlite:///./data/database.db"
+    python apps/backend/scripts/start_prod.py
     ```
 
 ### B. Frontend Setup
 1.  Navigate to `apps/frontend`.
-2.  Create `.env.local`.
-3.  Set the API URL:
+2.  Create `.env.local`:
     ```ini
     NEXT_PUBLIC_API_URL=http://localhost:8000/api/v1
     ```
-4.  Run the frontend:
-    ```bash
-    npm run dev
-    ```
+3.  Run: `npm run dev`
 
 ---
 
-## Troubleshooting
+## Summary for Screens (Railway)
 
-### "Attempted to call useQuery() from the server"
-This error occurs in Next.js App Router when a component using React Query hooks is not marked as a client component.
-**Fix:** Ensure `apps/frontend/src/app/dashboard/profile/page.tsx` has `'use client';` at the very top.
+**Screen: Variables**
+-   `DATABASE_URL`: `postgresql+asyncpg://...` (Make sure `asyncpg` is there!)
+-   `ALLOWED_ORIGINS`: `*` (Simple star for testing)
 
-### Database Connection Issues
-- **Postgres:** Ensure the connection string starts with `postgresql+asyncpg://`. SQLAlchemy requires the driver to be specified.
-- **SQLite:** Ensure the `data` directory exists in `apps/backend`.
-
+**Screen: Settings**
+-   **Start Command:** `python apps/backend/scripts/start_prod.py` (This runs migrations automatically)
