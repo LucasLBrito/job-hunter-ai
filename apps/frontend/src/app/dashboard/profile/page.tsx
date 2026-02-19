@@ -1,3 +1,5 @@
+'use client';
+
 import { ProfileForm } from '@/components/profile-form';
 import { Separator } from '@/components/ui/separator';
 
