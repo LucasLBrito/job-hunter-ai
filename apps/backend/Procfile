@@ -1,1 +1,0 @@
-web: sh scripts/start_prod.sh
