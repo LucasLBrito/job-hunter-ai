@@ -38,15 +38,28 @@ def main():
     except Exception as e:
         print(f"[ERROR] Failed to run migrations: {e}. Continuing...", flush=True)
 
+    # Verify greenlet (critical for SQLAlchemy async)
+    try:
+        import greenlet
+        print("[INFO] greenlet is installed.", flush=True)
+    except ImportError:
+        print("[WARNING] greenlet not found! Installing...", flush=True)
+        subprocess.call([sys.executable, "-m", "pip", "install", "greenlet"])
+
     # Start Uvicorn
     print(f"[INFO] Executing Uvicorn on 0.0.0.0:{port}", flush=True)
     
-    # We use os.execvp to replace the current process with uvicorn
-    # This ensures signals are handled correctly
+    # Use subprocess.run instead of execvp to capture exit status
     try:
-        os.execvp("uvicorn", ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", port])
+        cmd = [sys.executable, "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", port]
+        result = subprocess.run(cmd)
+        
+        if result.returncode != 0:
+            print(f"[ERROR] Uvicorn exited with code {result.returncode}", flush=True)
+            sys.exit(result.returncode)
+            
     except Exception as e:
-        print(f"[FATAL] Failed to start uvicorn: {e}", flush=True)
+        print(f"[FATAL] Failed to run uvicorn: {e}", flush=True)
         sys.exit(1)
 
 if __name__ == "__main__":
