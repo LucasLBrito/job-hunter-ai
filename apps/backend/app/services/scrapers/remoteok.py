@@ -5,6 +5,7 @@ from typing import List, Optional
 from datetime import datetime
 from app.services.scrapers.base import BaseScraper
 from app.services.scrapers.models import ScrapedJob
+from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +25,8 @@ class RemoteOKScraper(BaseScraper):
         # For simplicity in V1: Fetch RSS and filter by title/description match.
         
         try:
-            async with httpx.AsyncClient() as client:
+            proxy_url = settings.SCRAPER_PROXY_URL if settings.SCRAPER_PROXY_URL else None
+            async with httpx.AsyncClient(proxy=proxy_url) as client:
                 headers = {
                     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
                 }

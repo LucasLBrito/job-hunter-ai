@@ -5,6 +5,7 @@ from datetime import datetime
 
 from app.services.scrapers.base import BaseScraper
 from app.services.scrapers.models import ScrapedJob
+from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -47,6 +48,10 @@ class JobSpyScraper(BaseScraper):
         for platform in self.PLATFORMS:
             try:
                 logger.info(f"JobSpy: Scraping {platform}...")
+                
+                # Configure proxies if available
+                proxies = [settings.SCRAPER_PROXY_URL] if settings.SCRAPER_PROXY_URL else None
+                
                 df = scrape_jobs(
                     site_name=[platform],
                     search_term=query,
@@ -54,6 +59,7 @@ class JobSpyScraper(BaseScraper):
                     results_wanted=min(limit, 15),  # Per platform limit
                     hours_old=72,  # Last 3 days
                     country_indeed="Brazil" if platform == "indeed" else None,
+                    proxies=proxies
                 )
 
                 if df is None or df.empty:

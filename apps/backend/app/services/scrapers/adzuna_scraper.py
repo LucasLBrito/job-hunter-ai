@@ -58,7 +58,8 @@ class AdzunaScraper(BaseScraper):
                 "content-type": "application/json",
             }
 
-            async with httpx.AsyncClient() as client:
+            proxy_url = settings.SCRAPER_PROXY_URL if settings.SCRAPER_PROXY_URL else None
+            async with httpx.AsyncClient(proxy=proxy_url) as client:
                 response = await client.get(url, params=params, timeout=15.0)
                 response.raise_for_status()
                 data = response.json()

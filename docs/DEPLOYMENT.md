@@ -39,6 +39,7 @@ Go to the **"Variables"** tab and add the following strictly as shown:
 | `SECRET_KEY` | `change_this_to_something_random` | A random string for security |
 | `OPENAI_API_KEY` | `sk-...` | Your OpenAI API Key (starts with sk-) |
 | `ALLOWED_ORIGINS` | `*` | **CRITICAL:** Start with `*` or a comma-separated list like `https://myapp.vercel.app,http://localhost:3000`. Do NOT use `["..."]` JSON syntax here unless experienced. |
+| `SCRAPER_PROXY_URL` | `http://user:pass@proxy.example.com:8080` | **Optional:** A proxy URL to route web scraping requests through. Highly recommended for production to avoid IP bans (e.g., from Indeed/LinkedIn). |
 
 ---
 
