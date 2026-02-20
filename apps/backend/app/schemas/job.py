@@ -19,8 +19,8 @@ class JobSource(str, Enum):
 
 class JobBase(BaseModel):
     """Base job schema"""
-    title: str = Field(..., min_length=3, max_length=255)
-    company: str = Field(..., min_length=2, max_length=255)
+    title: str = Field(..., max_length=255)
+    company: str = Field(..., max_length=255)
     description: Optional[str] = None
     requirements: Optional[str] = None
     location: Optional[str] = None
@@ -39,8 +39,8 @@ class JobCreate(JobBase):
 
 class JobUpdate(BaseModel):
     """Schema for updating a job"""
-    title: Optional[str] = Field(None, min_length=3, max_length=255)
-    company: Optional[str] = Field(None, min_length=2, max_length=255)
+    title: Optional[str] = Field(None, max_length=255)
+    company: Optional[str] = Field(None, max_length=255)
     description: Optional[str] = None
     requirements: Optional[str] = None
     location: Optional[str] = None
