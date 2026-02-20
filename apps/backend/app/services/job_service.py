@@ -19,11 +19,14 @@ class JobService:
     def __init__(self, db: AsyncSession):
         self.db = db
         # Registry of all available scrapers
-        self.scrapers: List[BaseScraper] = [
-            JobSpyScraper(),      # LinkedIn, Indeed, Glassdoor, Google, ZipRecruiter
-            RemoteOKScraper(),    # RemoteOK RSS
-            AdzunaScraper(),      # Adzuna API (optional, needs API key)
-        ]
+        self.scrapers: List[BaseScraper] = []
+        
+        from app.core.config import settings
+        if settings.ENABLE_JOBSPY:
+            self.scrapers.append(JobSpyScraper())
+            
+        self.scrapers.append(RemoteOKScraper())
+        self.scrapers.append(AdzunaScraper())
 
     async def search_and_save_jobs(self, query: str, limit: int = 50) -> List[Job]:
         """
@@ -113,9 +116,16 @@ class JobService:
         """Run a scraper with error handling — never crash the whole search."""
         scraper_name = type(scraper).__name__
         try:
-            results = await scraper.search_jobs(query, limit=limit)
+            # 25 seconds timeout to prevent hanging the entire process
+            results = await asyncio.wait_for(
+                scraper.search_jobs(query, limit=limit),
+                timeout=25.0
+            )
             logger.info(f"{scraper_name}: returned {len(results)} results")
             return results
+        except asyncio.TimeoutError:
+            logger.error(f"{scraper_name} timed out after 25 seconds.")
+            return []
         except Exception as e:
             logger.error(f"{scraper_name} failed: {e}")
             return []

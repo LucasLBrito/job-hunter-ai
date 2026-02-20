@@ -60,6 +60,7 @@ class Settings(BaseSettings):
     
     # Scrapers
     SCRAPER_PROXY_URL: Optional[str] = None
+    ENABLE_JOBSPY: bool = True
     
     # Adzuna Job Search API (free at developer.adzuna.com)
     ADZUNA_APP_ID: Optional[str] = None

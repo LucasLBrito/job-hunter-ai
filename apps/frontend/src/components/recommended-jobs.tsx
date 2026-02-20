@@ -1,9 +1,9 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Loader2, Briefcase, MapPin, DollarSign, ExternalLink } from 'lucide-react';
+import { Loader2, Briefcase, MapPin, DollarSign, ExternalLink, Search } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
 import { useUserStore } from '@/store/user-store';
@@ -13,7 +13,7 @@ export default function RecommendedJobs() {
     const router = useRouter();
     const { isAuthenticated } = useUserStore();
 
-    const { data: jobs, isLoading, error } = useQuery({
+    const { data: jobs, isLoading, error, refetch: refetchJobs } = useQuery({
         queryKey: ['recommended-jobs'],
         queryFn: async () => {
             const res = await api.get('/jobs/recommended?limit=5');
@@ -23,6 +23,34 @@ export default function RecommendedJobs() {
         staleTime: 30000,
         enabled: isAuthenticated // Only run query if authenticated
     });
+
+    const { data: suggestionsData } = useQuery({
+        queryKey: ['preferences-suggestions'],
+        queryFn: async () => {
+            const res = await api.get('/users/me/preferences/suggestions');
+            return res.data;
+        },
+        enabled: isAuthenticated
+    });
+
+    const searchMutation = useMutation({
+        mutationFn: async (query: string) => {
+            const res = await api.post(`/jobs/search?query=${encodeURIComponent(query)}&limit=10`);
+            return res.data;
+        },
+        onSuccess: () => {
+            refetchJobs(); // Refresh the recommended jobs list
+            router.push('/dashboard/jobs'); // Send user to jobs page to see all of them
+        }
+    });
+
+    const handleAutoSearch = () => {
+        let queryStr = "Profissional OR Assistente OR Analista"; // default to generic terms
+        if (suggestionsData?.suggestions?.job_titles?.length > 0) {
+            queryStr = suggestionsData.suggestions.job_titles.join(' OR ');
+        }
+        searchMutation.mutate(queryStr);
+    };
 
     if (isLoading) {
         return (
@@ -88,9 +116,19 @@ export default function RecommendedJobs() {
                             Baseado na análise do seu currículo e preferências
                         </CardDescription>
                     </div>
-                    <Button variant="outline" onClick={() => router.push('/dashboard/jobs')}>
-                        Ver Todas
-                    </Button>
+                    <div className="flex gap-2">
+                        <Button
+                            variant="secondary"
+                            onClick={handleAutoSearch}
+                            disabled={searchMutation.isPending}
+                        >
+                            {searchMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Search className="mr-2 h-4 w-4" />}
+                            Buscar Novas Vagas
+                        </Button>
+                        <Button variant="outline" onClick={() => router.push('/dashboard/jobs')}>
+                            Ver Todas
+                        </Button>
+                    </div>
                 </div>
             </CardHeader>
             <CardContent>
@@ -106,10 +144,10 @@ export default function RecommendedJobs() {
                                         <h3 className="font-semibold text-lg">{job.title}</h3>
                                         {job.compatibility_score && job.compatibility_score > 0 && (
                                             <span className={`px-2 py-1 text-xs font-medium rounded-full ${job.compatibility_score >= 70
-                                                    ? 'bg-green-100 text-green-700'
-                                                    : job.compatibility_score >= 40
-                                                        ? 'bg-yellow-100 text-yellow-700'
-                                                        : 'bg-red-100 text-red-700'
+                                                ? 'bg-green-100 text-green-700'
+                                                : job.compatibility_score >= 40
+                                                    ? 'bg-yellow-100 text-yellow-700'
+                                                    : 'bg-red-100 text-red-700'
                                                 }`}>
                                                 {Math.round(job.compatibility_score)}% Match
                                             </span>
