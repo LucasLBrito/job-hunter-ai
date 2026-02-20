@@ -182,7 +182,16 @@ async def get_recommended_jobs(
     # Sort by score descending
     scored_jobs.sort(key=lambda x: x.compatibility_score or 0, reverse=True)
     
-    return scored_jobs[:limit]
+    # Filter out duplicates at runtime to clean up the UI
+    unique_jobs = []
+    seen = set()
+    for j in scored_jobs:
+        identifier = f"{j.title.lower()}|{j.company.lower() if j.company else ''}"
+        if identifier not in seen:
+            seen.add(identifier)
+            unique_jobs.append(j)
+            
+    return unique_jobs[:limit]
 
 
 @router.get("/{job_id}", response_model=schemas.JobResponse)

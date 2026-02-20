@@ -30,6 +30,7 @@ aiofiles>=23.0.0
 feedparser>=6.0.10
 redis>=5.0.0
 hiredis>=2.3.0
+python-jobspy>=1.1.51
 
 # Job Scheduler
 apscheduler>=3.10.0

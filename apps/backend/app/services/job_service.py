@@ -54,11 +54,22 @@ class JobService:
         # Save to database with deduplication
         for scraped_job in all_scraped:
             try:
-                # Deduplication check
+                # Deduplication check by external_id
                 existing_job = await crud_job.get_by_external_id(
                     self.db, external_id=scraped_job.external_id
                 )
                 if existing_job:
+                    continue
+                
+                # Extra deduplication by Title + Company to avoid overlapping sources
+                from sqlalchemy import select
+                existing_by_name = await self.db.execute(
+                    select(Job).where(
+                        Job.title == scraped_job.title, 
+                        Job.company == scraped_job.company
+                    )
+                )
+                if existing_by_name.scalars().first():
                     continue
                     
                 # Save new job

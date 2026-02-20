@@ -42,7 +42,8 @@ class RemoteOKScraper(BaseScraper):
                     break
                     
                 # Basic client-side filtering
-                if query.lower() not in entry.title.lower() and query.lower() not in entry.description.lower():
+                entry_description = entry.get("description", entry.get("summary", ""))
+                if query.lower() not in entry.title.lower() and query.lower() not in entry_description.lower():
                     continue
                 
                 # Title often is "Company calls for Role" or similar
@@ -65,7 +66,7 @@ class RemoteOKScraper(BaseScraper):
                     company=company,
                     location="Remote",
                     is_remote=True,
-                    description=entry.description,
+                    description=entry_description,
                     url=entry.link,
                     external_id=entry.id, # GUID
                     source_platform="remoteok",
