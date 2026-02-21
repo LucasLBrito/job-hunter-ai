@@ -27,8 +27,7 @@ class CathoScraper(BaseScraper):
         """
         logger.info(f"CathoScraper: Buscando por '{query}' na Catho...")
         
-        # A URL padrão da catho costuma ser /vagas/palavra-chave/
-        # Tratamento simples do termo de busca
+        # Formato da Catho: https://www.catho.com.br/vagas/palavra-chave/
         formatted_query = query.lower().replace(" ", "-")
         url = f"{self.BASE_URL}/{formatted_query}/"
         

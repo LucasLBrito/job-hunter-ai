@@ -23,7 +23,7 @@ class JobService:
         self.scrapers: List[BaseScraper] = []
         
         from app.core.config import settings
-        if settings.ENABLE_JOBSPY:
+        if settings.ENABLE_JOBSPY: 
             self.scrapers.append(JobSpyScraper())
             
         self.scrapers.append(RemoteOKScraper())
