@@ -1,102 +1,89 @@
 # 🌟 Job Hunter AI
 
-**Sistema completo de automação de busca, análise e aplicação de vagas de emprego com IA.**
+[![React](https://img.shields.io/badge/Frontend-React.js-blue?style=flat&logo=react)](apps/frontend) 
+[![FastAPI](https://img.shields.io/badge/Backend-FastAPI-009688?style=flat&logo=fastapi)](apps/backend)
+[![Docker](https://img.shields.io/badge/Deploy-Docker-2496ED?style=flat&logo=docker)](docker)
 
-Destrua a barreira da busca de emprego com um agente autônomo que trabalha 24/7 para você.
+> O **Job Hunter AI** é um sistema de automação inteligente construído com o propósito de revolucionar a busca por empregos. Ele funciona como um agente autônomo 24/7 que busca, analisa e filtra as melhores vagas para o seu perfil em diversas plataformas trabalhando de forma autônoma.
 
 ## ✨ Features Principais
 
-- 🤖 **Agente IA Autônomo** - Busca, analisa e (futuramente) aplica em vagas automaticamente.
-- 🕷️ **Multi-Platform Scraper** - Busca vagas em **LinkedIn, Indeed, Glassdoor e Adzuna** simultaneamente (via `python-jobspy`).
-- 📄 **Análise de Currículo** - Extração inteligente de skills via **Azure Document Intelligence** e **Gemini 1.5 Pro**.
-- 💬 **Integração WhatsApp** - Receba notificações de novas vagas e responda questionários diretamente pelo WhatsApp.
-- 🏢 **Match Inteligente** - Scoring de compatibilidade (0-100%) baseado no seu perfil e requisitos da vaga.
-- 📊 **Dashboard Moderno** - Interface React/Next.js para gerenciar candidaturas e visualizar insights.
-- 🐳 **Docker Native** - Ambiente de desenvolvimento e produção 100% containerizado.
+- 🤖 **Agente IA Autônomo** - Busca ativa e análise de compatibilidade de vagas usando IA (Gemini/OpenAI).
+- 🕷️ **Multi-Platform Scraper** - Coleta vagas simultaneamente em **LinkedIn, Indeed, Glassdoor e Adzuna**.
+- 📄 **Análise de Currículo** - Extração inteligente de habilidades usando **Azure Document Intelligence** e **LLMs**.
+- 💬 **Integração WhatsApp** - Alertas instantâneos e interação via chat diretamente pelo seu smartphone.
+- 🏢 **Match Inteligente** - Sistema de "Scoring" que dá uma nota (0-100%) para cada vaga baseado no seu currículo.
+- 📊 **Dashboard Moderno** - Central de comando Next.js limpa e responsiva para gerenciar todas as suas candidaturas (em construção).
 
-## 🛠️ Tech Stack
+## 🛠️ Tecnologias Utilizadas
 
-- **Frontend**: Next.js 14, React, TailwindCSS, ShadcnUI.
-- **Backend**: FastAPI (Python 3.11), SQLAlchemy (Async), Pydantic V2.
-- **Database**: PostgreSQL (Production), SQLite (Dev/Fallback).
-- **AI/ML**: Google Gemini 1.5 Flash/Pro, OpenAI GPT-4o (Opcional).
-- **Infra**: Docker, Docker Compose, Railway (Deploy).
+Este projeto segue uma arquitetura baseada em **Monorepo**, dividindo claramente o ecossistema:
 
-## 🚀 Quick Start (Docker)
+| Camada | Tecnologias Principais |
+|---|---|
+| **Frontend** | Next.js 14, React, TailwindCSS, ShadcnUI |
+| **Backend** | Python 3.11, FastAPI, SQLAlchemy (Async), Pydantic V2 |
+| **Database** | PostgreSQL (Produção), SQLite (Dev/Testes) |
+| **Inteligência Artificial** | Google Gemini 1.5 Flash/Pro, OpenAI GPT-4o, Azure AI |
+| **Infraestrutura** | Docker, Docker Compose, Railway (Deploy), Render |
 
-### Pré-requisitos
-- Docker & Docker Compose
-- Python 3.11+ (opcional, para scripts locais)
+---
 
-### 1. Configuração Inicial
+## 📂 Visão Geral da Estrutura
 
-```bash
-# 1. Clone o repositório
-git clone https://github.com/seu-usuario/job-hunter-ai.git
-cd job-hunter-ai
+Para entender em profundidade o que cada pasta faz, consulte os READMEs específicos clicando nos links abaixo:
 
-# 2. Configurar Variáveis de Ambiente
-# Backend
-cp apps/backend/.env.example apps/backend/.env
-# Frontend
-cp apps/frontend/.env.example apps/frontend/.env.local
-```
-
-### 2. Edite os arquivos `.env`
-Preencha as chaves de API necessárias (Gemini, Azure, etc.) em `apps/backend/.env`.
-
-### 3. Rodar a Aplicação
-
-```bash
-# Iniciar tudo (Frontend + Backend + Banco)
-docker-compose -f docker/docker-compose.dev.yml up -d --build
-```
-
-Acesse:
-- **Frontend**: http://localhost:3000
-- **Backend API**: http://localhost:8000/docs
-- **Logs**: `docker-compose -f docker/docker-compose.dev.yml logs -f`
-
-## 📦 Estrutura do Projeto
-
-```
+```text
 job-hunter-ai/
-├── apps/
-│   ├── backend/           # FastAPI Application
-│   └── frontend/          # Next.js Application
-├── docker/                # Docker Compose files
-├── scripts/
-│   ├── verification/      # Scripts de teste/verificação
-│   └── start/             # Scripts de inicialização
-└── README.md              # Este arquivo
+├── apps/                    # Aplicações principais do projeto
+│   ├── backend/             # 🐍 API em FastAPI (Lógica de IA, Scrapers, Banco de dados)
+│   └── frontend/            # ⚛️ Interface visual em Next.js
+├── data/                    # Bancos de dados locais (SQLite) 
+├── docker/                  # 🐳 Arquivos Docker Compose para Dev e Produção
+├── docs/                    # Documentações gerais
+│   └── history/             # Logs e históricos de desenvolvimento antigos
+└── scripts/                 # ⚙️ Automações para facilitar o uso
+    ├── setup/               # Scripts para preparar o ambiente
+    ├── start/               # Scripts para rodar os servidores
+    ├── verification/        # Scripts de teste e manutenção
+    └── windows/             # Scripts legados / utilitários para Windows
 ```
 
-## 🚢 Deploy (Railway)
+👉 **Acesso rápido aos guias detalhados:**
+- [Como funciona o Backend](apps/backend/README.md)
+- [Como funciona o Frontend](apps/frontend/README.md)
+- [Como usar os Scripts de automação](scripts/README.md)
+- [Como rodar usando Docker](docker/README.md)
 
-O projeto está configurado para deploy contínuo no **Railway**.
+---
 
-1. Crie um projeto no Railway.
-2. Conecte seu repositório GitHub.
-3. Adicione um serviço **PostgreSQL**.
-4. Configure as variáveis de ambiente no Railway (copie do `.env`).
-5. O deploy será automático usando o `Dockerfile` na raiz de `apps/backend`.
+## 🚀 Como Rodar o Projeto
 
-## 🧪 Testes e Verificação
+Você tem duas formas de rodar o repositório localmente. A mais recomendada e fácil é via **Docker**.
 
-Scripts úteis para verificar o funcionamento do sistema estão em `scripts/verification/`:
+### Opção 1: Usando Docker (Recomendado)
 
-```bash
-# Verificar banco de dados
-python scripts/verification/check_db.py
+> Consulte o guia completo em [**docker/README.md**](docker/README.md).
 
-# Verificar fluxo de vagas
-python scripts/verification/verify_jobs_flow.py
-```
+1. Preencha as chaves de API necessárias (Gemini, Azure, etc.) copiando o arquivo `.env.example` para `.env` tanto no backend quanto no frontend.
+2. Na raiz do projeto, execute:
+   ```bash
+   docker-compose -f docker/docker-compose.dev.yml up -d --build
+   ```
+3. Acesse:
+   - Frontend: `http://localhost:3000`
+   - Backend API Docs: `http://localhost:8000/docs`
 
-## 🤝 Contribuição
+### Opção 2: Usando Scripts Nativos (Local)
 
-Sinta-se livre para abrir Issues e Pull Requests.
+> Ideal para Desenvolvimento Ativo. Consulte o guia [**scripts/README.md**](scripts/README.md).
 
-## 📝 Licença
+O projeto conta com scripts prontos na pasta `scripts/start` para facilitar o inicio dos serivdores sem precisar digitar comandos longos toda hora.
+Basta executar `scripts/start/start-backend-local.bat` (ou `.sh` no linux/mac).
 
-MIT
+---
+
+## 🤝 Como Contribuir
+
+Fique à vontade para reportar bugs através das **Issues** ou enviar **Pull Requests**. 
+Antes de codar, recomendamos fortemente a leitura do nosso [Guia de Contribuição](CONTRIBUTING.md) para entender nossos padrões de *commits* e *branches*.
