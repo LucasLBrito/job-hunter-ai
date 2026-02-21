@@ -11,14 +11,14 @@ class OpenAIClient:
     """Client for OpenAI API"""
     
     def __init__(self):
-        if not settings.OPENAI_API_KEY:
+        self.api_key = settings.OPENAI_API_KEY
+        self.model_name = "gpt-4o-mini" # Cost-effective model
+        if not self.api_key:
             logger.warning("OPENAI_API_KEY not set. AI analysis fallback will be disabled.")
             self.client = None
-            return
-            
-        self.client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
-        self.model_name = "gpt-4o-mini" # User didn't specify, defaulting to cost-effective 4o-mini
-        logger.info(f"Initialized OpenAI with model: {self.model_name}")
+        else:
+            self.client = AsyncOpenAI(api_key=self.api_key)
+            logger.info(f"Initialized OpenAI with model: {self.model_name}")
 
     async def analyze_resume(self, text: str) -> Dict[str, Any]:
         """
