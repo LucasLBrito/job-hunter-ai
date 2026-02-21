@@ -20,7 +20,8 @@ export default function RecommendedJobs() {
             return res.data;
         },
         retry: 1,
-        staleTime: 30000,
+        staleTime: Infinity, // Dont refetch immediately on navigation
+        refetchOnWindowFocus: false, // Prevent checking the backend just because the user switched tabs
         enabled: isAuthenticated // Only run query if authenticated
     });
 

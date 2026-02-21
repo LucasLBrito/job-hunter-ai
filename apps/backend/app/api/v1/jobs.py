@@ -119,14 +119,14 @@ async def get_recommended_jobs(
         job_title_lower = job.title.lower() if job.title else ""
         
         # 1. Technology/Skill Match (weight: 35)
-        max_score += 35
         if all_skills:
+            max_score += 35
             match_count = sum(1 for skill in all_skills if skill in job_text)
             score += (match_count / max(len(all_skills), 1)) * 35
         
         # 2. Job Title Match (weight: 25)
-        max_score += 25
         if user_job_titles:
+            max_score += 25
             title_match = any(t.lower() in job_title_lower for t in user_job_titles)
             if title_match:
                 score += 25
@@ -136,8 +136,8 @@ async def get_recommended_jobs(
                 score += (partial / len(user_job_titles)) * 15
         
         # 3. Work Model Match (weight: 15)
-        max_score += 15
         if user_work_models:
+            max_score += 15
             user_wants_remote = any(m.lower() in ["remote", "remoto"] for m in user_work_models)
             user_wants_hybrid = any(m.lower() in ["hybrid", "híbrido", "hibrido"] for m in user_work_models)
             
@@ -149,38 +149,34 @@ async def get_recommended_jobs(
                 score += 10  # User prefers in-person and job is in-person
         
         # 4. Salary Match (weight: 10)
-        max_score += 10
         if user_salary_min and job.salary_max:
+            max_score += 10
             if job.salary_max >= user_salary_min:
                 score += 10
             elif job.salary_max >= user_salary_min * 0.8:
                 score += 5  # Within 80% of desired minimum
-        elif not user_salary_min:
-            score += 5  # No preference, partial score
         
         # 5. Location Match (weight: 10)
-        max_score += 10
         if user_locations and job.location:
+            max_score += 10
             loc_match = any(loc.lower() in job.location.lower() for loc in user_locations)
             if loc_match:
                 score += 10
-        elif not user_locations:
-            score += 5  # No preference
         
         # 6. Seniority Match (weight: 5)
-        max_score += 5
         if user_seniority:
+            max_score += 5
             seniority_lower = user_seniority.lower()
             if seniority_lower in job_title_lower or seniority_lower in job_text:
                 score += 5
         
-        # Calculate percentage
+        # Calculate percentage - Default to 0 instead of returning nothing
         final_score = min(int((score / max_score) * 100), 95) if max_score > 0 else 0
         job.compatibility_score = final_score
         scored_jobs.append(job)
     
-    # Sort by score descending
-    scored_jobs.sort(key=lambda x: x.compatibility_score or 0, reverse=True)
+    # Sort by score descending. If scores are 0, it sorts by newest/id via the original query anyway
+    scored_jobs.sort(key=lambda x: (x.compatibility_score or 0, float(x.id)), reverse=True)
     
     # Filter out duplicates at runtime to clean up the UI
     unique_jobs = []
