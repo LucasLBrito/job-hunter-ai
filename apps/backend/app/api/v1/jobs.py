@@ -287,8 +287,30 @@ async def analyze_job_fit(
     if not api_key:
         raise HTTPException(status_code=400, detail="Gemini API Key not found.")
 
+    # Extract structured user preferences to pass to the AI
+    user_prefs = {
+        "job_titles": current_user.job_titles,
+        "seniority_level": current_user.seniority_level,
+        "work_models": current_user.work_models,
+        "employment_types": current_user.employment_types,
+        "technologies": current_user.technologies,
+        "preferred_locations": current_user.preferred_locations,
+        "salary_min": current_user.salary_min,
+        "salary_max": current_user.salary_max,
+        "industries": current_user.industries,
+        "benefits": current_user.benefits,
+        "company_styles": current_user.company_styles,
+    }
+    
+    # Clean up empty preferences to not distract the AI
+    cleaned_prefs = {k: v for k, v in user_prefs.items() if v}
+
     matcher = MatcherService(api_key=api_key)
-    analysis = await matcher.analyze_fit(resume_text, job.description or job.title)
+    analysis = await matcher.analyze_fit(
+        resume_text=resume_text, 
+        job_description=job.description or job.title,
+        user_preferences=cleaned_prefs
+    )
     
     job.compatibility_score = analysis.get("match_score")
     job.pros = json.dumps(analysis.get("pros", []))

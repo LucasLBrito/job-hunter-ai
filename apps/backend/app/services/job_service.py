@@ -8,6 +8,7 @@ from app.services.scrapers.base import BaseScraper
 from app.services.scrapers.remoteok import RemoteOKScraper
 from app.services.scrapers.jobspy_scraper import JobSpyScraper
 from app.services.scrapers.adzuna_scraper import AdzunaScraper
+from app.services.scrapers.catho_scraper import CathoScraper
 from app.services.scrapers.models import ScrapedJob
 from app.models.job import Job
 from app.crud import job as crud_job
@@ -27,6 +28,7 @@ class JobService:
             
         self.scrapers.append(RemoteOKScraper())
         self.scrapers.append(AdzunaScraper())
+        self.scrapers.append(CathoScraper())
 
     async def search_and_save_jobs(self, query: str, limit: int = 50) -> List[Job]:
         """

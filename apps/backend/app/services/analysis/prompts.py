@@ -65,8 +65,14 @@ Candidate Resume:
 
 Job Description:
 {job_description}
+{user_preferences_section}
 
 Analyze the compatibility.
+CRITICAL SCORING RULES:
+1. If "User Preferences" are provided, you MUST weigh them heavily in the score. 
+2. If a specific preference is listed (e.g., Remote work, specific Salary), and the job does not match it, penalize the score significantly.
+3. If a preference is NOT listed (left blank by the user), DO NOT penalize the score for it. Only evaluate based on the provided preferences and the resume skills.
+4. The resume skills and experience still matter, but explicit user preferences act as hard filters/strong modifiers.
 Return a valid JSON object (NO markdown, NO preamble):
 {{
     "match_score": <int 0-100>,
