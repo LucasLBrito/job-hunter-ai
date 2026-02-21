@@ -27,16 +27,19 @@ class CathoScraper(BaseScraper):
         """
         logger.info(f"CathoScraper: Buscando por '{query}' na Catho...")
         
-        # Formato da Catho: https://www.catho.com.br/vagas/palavra-chave/
-        formatted_query = query.lower().replace(" ", "-")
-        url = f"{self.BASE_URL}/{formatted_query}/"
+        # Try the most standard query parameter URL
+        url = f"{self.BASE_URL}/?q={query}"
         
         # Se location for provida (ex: são paulo), a Catho geralmente anexa com ?cidade_id=
         # Mas para não errar no Regex do id da cidade, faremos a busca ampla primeiro.
         
         headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-            "Accept-Language": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+            "Accept-Language": "pt-BR,pt;q=0.9",
+            "Referer": "https://www.catho.com.br/",
+            "Connection": "keep-alive",
+            "Upgrade-Insecure-Requests": "1"
         }
 
         jobs = []

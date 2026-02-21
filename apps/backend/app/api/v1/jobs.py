@@ -42,23 +42,25 @@ async def get_recommended_jobs(
 ) -> Any:
     """
     Get AI-recommended jobs based on user's analyzed resume AND preferences.
-    Returns jobs sorted by composite compatibility score.
     """
     from sqlalchemy import select, desc
     from app.models.resume import Resume
     import json
     
+    print(f"DEBUG: get_recommended_jobs for user {current_user.id}")
+    
     # Get user's most recent analyzed resume
     stmt = select(Resume).where(
         Resume.user_id == current_user.id,
         Resume.is_analyzed == True
-    ).order_by(desc(Resume.updated_at)).limit(1)
+    ).order_by(desc(Resume.analyzed_at)).limit(1)
     
     result = await db.execute(stmt)
     resume = result.scalars().first()
     
     # Get all active jobs
-    all_jobs = await crud.job.get_multi(db, skip=0, limit=200)
+    from app.crud import job as crud_job
+    all_jobs = await crud_job.get_multi(db, skip=0, limit=200)
     
     if not all_jobs:
         return []
@@ -67,22 +69,16 @@ async def get_recommended_jobs(
     resume_skills = []
     if resume:
         try:
-            resume_skills = json.loads(resume.technical_skills) if resume.technical_skills else []
+            raw_skills = json.loads(resume.technical_skills) if resume.technical_skills else []
+            resume_skills = [str(s).lower() for s in raw_skills if s]
         except:
             resume_skills = []
     
     # Extract user preferences
     user_techs = []
-    user_work_models = []
-    user_job_titles = []
-    user_locations = []
-    user_industries = []
-    user_salary_min = None
-    user_salary_max = None
-    user_seniority = None
-    
     try:
-        user_techs = json.loads(current_user.technologies) if current_user.technologies else []
+        raw_techs = json.loads(current_user.technologies) if current_user.technologies else []
+        user_techs = [str(s).lower() for s in raw_techs if s]
     except:
         pass
     try:
@@ -107,7 +103,7 @@ async def get_recommended_jobs(
     user_seniority = current_user.seniority_level
     
     # Combine resume skills + user-selected technologies (unique)
-    all_skills = list(set([s.lower() for s in resume_skills] + [s.lower() for s in user_techs]))
+    all_skills = list(set(resume_skills + user_techs))
     
     # Score each job
     scored_jobs = []
@@ -115,8 +111,9 @@ async def get_recommended_jobs(
         score = 0.0
         max_score = 0.0
         
-        job_text = f"{job.title} {job.description or ''} {job.requirements or ''}".lower()
-        job_title_lower = job.title.lower() if job.title else ""
+        job_title = str(job.title or "").lower()
+        job_text = f"{job_title} {str(job.description or '').lower()} {str(job.requirements or '').lower()}"
+        job_title_lower = job_title
         
         # 1. Technology/Skill Match (weight: 35)
         if all_skills:
@@ -182,7 +179,9 @@ async def get_recommended_jobs(
     unique_jobs = []
     seen = set()
     for j in scored_jobs:
-        identifier = f"{j.title.lower()}|{j.company.lower() if j.company else ''}"
+        title_safe = str(j.title or "Unknown").lower()
+        company_safe = str(j.company or "").lower()
+        identifier = f"{title_safe}|{company_safe}"
         if identifier not in seen:
             seen.add(identifier)
             unique_jobs.append(j)
