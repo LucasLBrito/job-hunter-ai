@@ -132,7 +132,7 @@ export default function ResumesPage() {
     };
 
     return (
-        <div className="min-h-screen bg-gray-100 dark:bg-gray-900 p-6">
+        <div className="min-h-screen bg-gray-100 dark:bg-gray-900 p-6 md:p-12 lg:p-16">
             <div className="max-w-4xl mx-auto">
                 <Button
                     variant="ghost"

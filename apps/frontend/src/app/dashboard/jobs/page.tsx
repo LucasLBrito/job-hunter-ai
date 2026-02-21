@@ -106,7 +106,7 @@ export default function JobsPage() {
     };
 
     return (
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-8">
+        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6 md:p-12 lg:p-16">
             <div className="max-w-7xl mx-auto space-y-8">
                 <div className="flex flex-col space-y-2">
                     <h1 className="text-3xl font-bold tracking-tight">Job Search</h1>

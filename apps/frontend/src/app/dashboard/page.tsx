@@ -36,13 +36,13 @@ export default function DashboardPage() {
     return (
         <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
             <nav className="bg-white dark:bg-gray-800 shadow">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="flex justify-between h-16">
+                <div className="max-w-7xl mx-auto px-6 sm:px-10 lg:px-16">
+                    <div className="flex justify-between h-20">
                         <div className="flex items-center">
-                            <h1 className="text-xl font-bold">Job Hunter AI</h1>
+                            <h1 className="text-2xl font-bold">Job Hunter AI</h1>
                         </div>
-                        <div className="flex items-center space-x-4">
-                            <span className="text-sm text-gray-500">Welcome, {user?.full_name}</span>
+                        <div className="flex items-center space-x-6">
+                            <span className="text-sm text-gray-500 hidden sm:inline-block">Welcome, {user?.full_name}</span>
                             <Button variant="outline" onClick={() => { logout(); router.push('/login'); }}>
                                 Logout
                             </Button>
@@ -51,9 +51,9 @@ export default function DashboardPage() {
                 </div>
             </nav>
 
-            <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-                <div className="px-4 py-6 sm:px-0">
-                    <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
+            <main className="max-w-7xl mx-auto py-10 px-6 sm:px-10 lg:px-16">
+                <div className="py-6 space-y-8">
+                    <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
                         {/* Stats Cards */}
                         <Card>
                             <CardHeader className="pb-2">
