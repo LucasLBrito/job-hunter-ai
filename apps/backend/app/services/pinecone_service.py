@@ -7,7 +7,7 @@ logger = logging.getLogger(__name__)
 
 class PineconeService:
     def __init__(self):
-        self.api_key = settings.PINECONE_API_KEY
+        self.api_key = settings.PINECONE_KEY or settings.PINECONE_API_KEY
         self.index_name = settings.PINECONE_INDEX_NAME
         self.pc = None
         self.index = None

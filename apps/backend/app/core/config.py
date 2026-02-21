@@ -83,6 +83,7 @@ class Settings(BaseSettings):
     
     # Pinecone Vector DB
     PINECONE_API_KEY: Optional[str] = None
+    PINECONE_KEY: Optional[str] = None
     PINECONE_INDEX_NAME: str = "job-hunter-ai"
     PINECONE_ENV: str = "us-east-1"  # Optional, depending on Pinecone version
     
