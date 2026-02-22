@@ -53,11 +53,11 @@ export function JobCard({ job, onAnalyze }: { job: Job, onAnalyze: (jobId: numbe
     };
 
     return (
-        <Card className="h-full flex flex-col">
+        <Card className="h-full flex flex-col transition-all duration-300 dark:hover:bg-gray-800 dark:hover:border-gray-500 hover:shadow-md dark:border-gray-700">
             <CardHeader>
                 <div className="flex justify-between items-start">
                     <div>
-                        <CardTitle className="text-lg font-bold hover:text-blue-600 transition-colors">
+                        <CardTitle className="text-lg font-bold hover:text-blue-600 dark:text-gray-100 transition-colors">
                             <a href={job.source_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
                                 {job.title} <ExternalLink className="h-4 w-4" />
                             </a>
