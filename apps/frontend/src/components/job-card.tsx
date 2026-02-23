@@ -53,7 +53,7 @@ export function JobCard({ job, onAnalyze }: { job: Job, onAnalyze: (jobId: numbe
     };
 
     return (
-        <Card className="h-full flex flex-col transition-all duration-300 dark:hover:bg-gray-800 dark:hover:border-gray-500 hover:shadow-md dark:border-gray-700">
+        <Card className="h-full flex flex-col transition-all duration-300 dark:hover:bg-slate-800/80 dark:hover:border-slate-500 hover:shadow-md hover:border-gray-300 dark:border-slate-800">
             <CardHeader>
                 <div className="flex justify-between items-start">
                     <div>
@@ -65,9 +65,14 @@ export function JobCard({ job, onAnalyze }: { job: Job, onAnalyze: (jobId: numbe
                         <div className="flex items-center text-sm text-gray-500 mt-1 gap-2">
                             <Building2 className="h-3 w-3" /> {job.company}
                         </div>
-                        <div className="flex items-center text-sm text-gray-500 mt-1 gap-2">
+                        <div className="flex items-center text-sm text-gray-500 mt-1 gap-2 flex-wrap">
                             <MapPin className="h-3 w-3" /> {job.location || 'Unknown'}
                             {job.is_remote && <Badge variant="outline">Remote</Badge>}
+                            {job.source_platform && (
+                                <span className="flex items-center gap-1 bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded-full text-xs font-medium border border-blue-200 dark:border-blue-800">
+                                    🌐 {job.source_platform}
+                                </span>
+                            )}
                         </div>
                     </div>
                     {job.compatibility_score !== null && job.compatibility_score !== undefined && (

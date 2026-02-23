@@ -17,6 +17,16 @@ export default function RecommendedJobs() {
         queryKey: ['recommended-jobs'],
         queryFn: async () => {
             const res = await api.get('/jobs/recommended?limit=5');
+
+            // Log platforms for verification
+            if (res.data && res.data.length > 0) {
+                const platforms = new Set(res.data.map((j: any) => j.source_platform).filter(Boolean));
+                console.log("🔍 [Scraper Check] Vagas recomendadas retornadas das plataformas:", Array.from(platforms).join(', '));
+                console.log("📊 [Scraper Check] Total de vagas sugeridas:", res.data.length);
+            } else {
+                console.log("⚠️ [Scraper Check] Nenhuma vaga recomendada encontrada ou scrapers falharam.");
+            }
+
             return res.data;
         },
         retry: 1,
@@ -39,9 +49,9 @@ export default function RecommendedJobs() {
             const res = await api.post(`/jobs/search?query=${encodeURIComponent(query)}&limit=10`);
             return res.data;
         },
-        onSuccess: () => {
+        onSuccess: (data, variables) => {
             refetchJobs(); // Refresh the recommended jobs list
-            router.push('/dashboard/jobs'); // Send user to jobs page to see all of them
+            router.push(`/dashboard/jobs?q=${encodeURIComponent(variables)}`); // Send user to jobs page to see all of them
         }
     });
 
@@ -137,7 +147,7 @@ export default function RecommendedJobs() {
                     {jobs.map((job: any) => (
                         <div
                             key={job.id}
-                            className="border rounded-lg p-4 hover:bg-gray-50 transition-colors"
+                            className="border rounded-lg p-4 hover:bg-gray-50 dark:hover:bg-slate-800/80 dark:border-slate-700 transition-colors"
                         >
                             <div className="flex items-start justify-between gap-4">
                                 <div className="flex-1">
@@ -156,13 +166,18 @@ export default function RecommendedJobs() {
                                     </div>
 
                                     {job.company && (
-                                        <p className="text-sm text-gray-600 mb-2">
+                                        <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">
                                             <Briefcase className="inline h-3 w-3 mr-1" />
                                             {job.company}
                                         </p>
                                     )}
 
-                                    <div className="flex flex-wrap gap-3 text-sm text-gray-500 mb-3">
+                                    <div className="flex flex-wrap gap-3 text-sm text-gray-500 mb-3 items-center">
+                                        {job.source_platform && (
+                                            <span className="flex items-center gap-1 bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded-full text-xs font-medium border border-blue-200 dark:border-blue-800">
+                                                🌐 {job.source_platform}
+                                            </span>
+                                        )}
                                         {job.location && (
                                             <span className="flex items-center gap-1">
                                                 <MapPin className="h-3 w-3" />
@@ -178,7 +193,7 @@ export default function RecommendedJobs() {
                                     </div>
 
                                     {job.description && (
-                                        <p className="text-sm text-gray-600 line-clamp-2 mb-3">
+                                        <p className="text-sm text-gray-600 dark:text-gray-300 line-clamp-2 mb-3">
                                             {job.description}
                                         </p>
                                     )}
@@ -188,7 +203,7 @@ export default function RecommendedJobs() {
                                             {job.required_skills.slice(0, 5).map((skill: string, idx: number) => (
                                                 <span
                                                     key={idx}
-                                                    className="px-2 py-1 text-xs rounded-md bg-gray-100 text-gray-700"
+                                                    className="px-2 py-1 text-xs rounded-md bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300"
                                                 >
                                                     {skill}
                                                 </span>
