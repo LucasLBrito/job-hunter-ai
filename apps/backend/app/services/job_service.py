@@ -30,6 +30,27 @@ class JobService:
         self.scrapers.append(AdzunaScraper())
         self.scrapers.append(VagasScraper())
 
+        # ── Novos scrapers do engine de 20 plataformas ──────────────────────
+        # TI Brasil
+        from app.services.scrapers.gupy_scraper import GupyScraper
+        from app.services.scrapers.ti_brasil_scrapers import (
+            ProgramaThorScraper, GeekHunterScraper, CoodeshScraper, APInfoScraper
+        )
+        # Remoto
+        from app.services.scrapers.remote_scrapers import RemotarScraper, WeWorkRemotelyScraper
+        # Freelance
+        from app.services.scrapers.freelance_scrapers import WorkanaScraper, FreelaScraper
+
+        self.scrapers.append(GupyScraper())
+        self.scrapers.append(ProgramaThorScraper())
+        self.scrapers.append(GeekHunterScraper())
+        self.scrapers.append(CoodeshScraper())
+        self.scrapers.append(APInfoScraper())
+        self.scrapers.append(RemotarScraper())
+        self.scrapers.append(WeWorkRemotelyScraper())
+        self.scrapers.append(WorkanaScraper())
+        self.scrapers.append(FreelaScraper())
+
     async def search_and_save_jobs(self, query: str, limit: int = 50) -> List[Job]:
         """
         Search for jobs across ALL configured scrapers and save new ones to DB.

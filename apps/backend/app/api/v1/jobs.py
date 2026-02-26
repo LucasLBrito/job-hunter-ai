@@ -253,6 +253,81 @@ async def search_jobs(
     new_jobs = await job_service.search_and_save_jobs(query=query, limit=limit)
     return new_jobs
 
+
+@router.post("/analyze-batch")
+async def analyze_jobs_batch(
+    *,
+    db: AsyncSession = Depends(deps.get_db),
+    query: str,
+    max_vagas: int = 20,
+    current_user = Depends(deps.get_current_active_user),
+) -> Any:
+    """
+    Fluxo completo: busca vagas em TODOS os scrapers configurados E analisa com IA
+    (GPT-4o-mini) em uma única chamada.
+    
+    Retorna lista de vagas enriquecidas com campo `analise_ia` contendo:
+    - `pontuacao`: 0-100
+    - `recomendacao`: APLICAR | CONSIDERAR | IGNORAR
+    - `motivo`: explicação em 1-2 frases
+    - `pontos_positivos`: lista de pontos fortes
+    - `pontos_negativos`: lista de pontos fracos
+    - `salario_estimado`: valor estimado ou 'Não informado'
+    
+    O perfil de análise é construído automaticamente a partir das preferências do usuário.
+    """
+    import json
+
+    from app.services.job_service import JobService
+    from app.services.job_ai_analyzer import JobAIAnalyzer
+
+    # 1. Buscar vagas com os scrapers
+    job_service = JobService(db)
+    saved_jobs = await job_service.search_and_save_jobs(query=query, limit=max_vagas * 2)
+
+    if not saved_jobs:
+        return {"total": 0, "analyzed": 0, "vagas": []}
+
+    # 2. Converter Job models para dicts compatíveis com o analisador
+    vagas_dicts = [
+        {
+            "title": j.title,
+            "company": j.company,
+            "location": j.location,
+            "is_remote": j.is_remote,
+            "description": j.description or "",
+            "source_platform": j.source_platform,
+            "source_url": j.source_url,
+            "salary_min": j.salary_min,
+            "salary_max": j.salary_max,
+            "_job_id": j.id,
+        }
+        for j in saved_jobs
+    ]
+
+    # 3. Criar analisador com perfil do usuário
+    analyzer = JobAIAnalyzer.from_user(current_user)
+    vagas_analisadas = await analyzer.analisar_lote(vagas_dicts, max_vagas=max_vagas)
+
+    # 4. Atualizar compatibility_score no banco para vagas analisadas com sucesso
+    for vaga in vagas_analisadas:
+        analise = vaga.get("analise_ia", {})
+        job_id = vaga.get("_job_id")
+        if job_id and analise.get("recomendacao") not in ("ERRO", None):
+            job = await crud.job.get(db=db, id=job_id)
+            if job:
+                job.compatibility_score = analise.get("pontuacao", 0)
+                db.add(job)
+    await db.commit()
+
+    return {
+        "total_coletadas": len(saved_jobs),
+        "total_analisadas": len(vagas_analisadas),
+        "perfil_usado": analyzer.perfil,
+        "vagas": vagas_analisadas,
+    }
+
+
 @router.post("/{job_id}/analyze", response_model=schemas.JobResponse)
 async def analyze_job_fit(
     *,
