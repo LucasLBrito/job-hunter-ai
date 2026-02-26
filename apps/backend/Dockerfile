@@ -2,33 +2,29 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
+# Instalar dependências do sistema necessárias para compilação (ex: uvicorn/gunicorn) e scrapers
+RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
+    libpq-dev \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements first for better caching
-COPY railway_requirements.txt .
+# Copiar requirements primeiro para cachear as dependências
+COPY requirements.txt .
 
-# Install Python dependencies
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir -r railway_requirements.txt
+# Instalar dependências Python
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy application code
+# Copiar todo o código fonte
 COPY . .
 
-# Create directory for uploaded files and data
-RUN mkdir -p /app/uploads /app/data
+# Variáveis de ambiente default (podem ser sobrescritas pelo docker-compose)
+ENV PYTHONPATH=/app
+ENV PORT=8000
+ENV HOST=0.0.0.0
 
-# Expose port - Railway injects PORT env var (usually 8080)
-ENV PORT=8080
-EXPOSE 8080
+# Expor a porta
+EXPOSE 8000
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=5 \
-    CMD curl -f http://localhost:${PORT:-8000}/health || exit 1
-
-# Run the application
-# Run the application using shell to allow variable expansion
-CMD ["python", "-u", "scripts/start_prod.py"]
+# Script de inicialização que roda migrações e sobe o servidor
+CMD ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --forwarded-allow-ips '*'"]

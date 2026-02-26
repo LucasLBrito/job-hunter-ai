@@ -44,3 +44,7 @@ langchain-openai>=0.0.5
 langchain-anthropic>=0.1.0
 langgraph>=0.0.26
 aiosmtplib>=3.0.1
+
+# ── Engine de Vagas / AI Analyzer / MCP Server ──────────────────────────────
+openai>=1.0.0          # Análise de vagas com GPT-4o-mini (job_ai_analyzer.py)
+mcp>=1.0.0             # Servidor MCP para Claude Desktop (opcional, instalar se usar mcp_server_vagas.py)

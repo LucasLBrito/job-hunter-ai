@@ -1,0 +1,86 @@
+version: '3.8'
+
+services:
+  # Redis (Cache e Queue)
+  redis:
+    image: redis:7-alpine
+    container_name: jobhunter-redis
+    volumes:
+      - redis-data:/data
+    restart: unless-stopped
+    networks:
+      - jobhunter-net
+
+  # Backend API (FastAPI)
+  backend:
+    build:
+      context: ./apps/backend
+      dockerfile: Dockerfile
+    container_name: jobhunter-backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    environment:
+      - DATABASE_URL=sqlite+aiosqlite:///./data/database.db
+      - REDIS_URL=redis://redis:6379/0
+      - ENVIRONMENT=production
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+    env_file:
+      - ./apps/backend/.env
+    depends_on:
+      - redis
+    networks:
+      - jobhunter-net
+
+  # Agent Scheduler (Background Jobs)
+  agent-scheduler:
+    build:
+      context: ./apps/backend
+      dockerfile: Dockerfile
+    container_name: jobhunter-scheduler
+    restart: unless-stopped
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    environment:
+      - DATABASE_URL=sqlite+aiosqlite:///./data/database.db
+      - REDIS_URL=redis://redis:6379/0
+      - ENVIRONMENT=production
+    env_file:
+      - ./apps/backend/.env
+    command: python -m app.scripts.run_scheduler
+    depends_on:
+      - backend
+      - redis
+    networks:
+      - jobhunter-net
+
+  # Frontend (Next.js)
+  frontend:
+    build:
+      context: ./apps/frontend
+      dockerfile: Dockerfile
+      args:
+        - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:8000}
+    container_name: jobhunter-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:8000}
+      - NODE_ENV=production
+    depends_on:
+      - backend
+    networks:
+      - jobhunter-net
+
+networks:
+  jobhunter-net:
+    driver: bridge
+
+volumes:
+  redis-data:
+    driver: local

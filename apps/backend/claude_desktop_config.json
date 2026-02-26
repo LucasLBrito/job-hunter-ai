@@ -1,0 +1,14 @@
+{
+    "mcpServers": {
+        "job-hunter-ai": {
+            "command": "python",
+            "args": [
+                "apps/backend/mcp_server_vagas.py"
+            ],
+            "env": {
+                "OPENAI_API_KEY": "sk-SUA-CHAVE-AQUI",
+                "DATABASE_URL": "sqlite+aiosqlite:///./data/database.db"
+            }
+        }
+    }
+}

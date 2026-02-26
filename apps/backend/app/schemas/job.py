@@ -15,6 +15,8 @@ class JobSource(str, Enum):
     ZIPRECRUITER = "zip_recruiter"
     ADZUNA = "adzuna"
     MANUAL = "manual"
+    VAGAS_COM_BR = "vagas.com.br"
+    CATHO = "catho"
 
 
 class JobBase(BaseModel):

@@ -11,7 +11,7 @@ from app.services.scrapers.models import ScrapedJob
 logger = logging.getLogger(__name__)
 
 class VagasScraper(BaseScraper):
-    PLATFORM_NAME = "Vagas.com.br"
+    PLATFORM_NAME = "vagas.com.br"
     BASE_URL = "https://www.vagas.com.br/vagas-de"
 
     async def search_jobs(self, query: str, limit: int = 20, location: str = "") -> List[ScrapedJob]:
