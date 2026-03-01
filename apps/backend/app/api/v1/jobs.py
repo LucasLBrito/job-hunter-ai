@@ -41,151 +41,77 @@ async def get_recommended_jobs(
     current_user = Depends(deps.get_current_active_user),
 ) -> Any:
     """
-    Get AI-recommended jobs based on user's analyzed resume AND preferences.
+    Get top recommended jobs for the current user.
+    Queries the user_jobs table for pre-computed per-user scores.
+    Falls back to in-memory scoring if no scored entries exist yet.
     """
     from sqlalchemy import select, desc
-    from app.models.resume import Resume
-    import json
-    
+    from app.models.user_job import UserJob
+    from app.models.job import Job as JobModel
+
     print(f"DEBUG: get_recommended_jobs for user {current_user.id}")
-    
-    # Get user's most recent analyzed resume
-    stmt = select(Resume).where(
+
+    # --- Primary path: read from user_jobs table ---
+    stmt = (
+        select(JobModel)
+        .join(UserJob, UserJob.job_id == JobModel.id)
+        .where(UserJob.user_id == current_user.id)
+        .order_by(UserJob.compatibility_score.desc().nullslast())
+        .limit(limit * 2)  # extra room for dedup
+    )
+    result = await db.execute(stmt)
+    db_scored_jobs = result.scalars().all()
+
+    if db_scored_jobs:
+        # Attach the per-user score to the job object for the response
+        score_map_stmt = select(UserJob).where(UserJob.user_id == current_user.id)
+        score_map_result = await db.execute(score_map_stmt)
+        score_map = {uj.job_id: uj.compatibility_score for uj in score_map_result.scalars().all()}
+
+        for j in db_scored_jobs:
+            j.compatibility_score = score_map.get(j.id)
+
+        # Dedup by title+company
+        unique_jobs = []
+        seen = set()
+        for j in db_scored_jobs:
+            key = f"{str(j.title or '').lower()}|{str(j.company or '').lower()}"
+            if key not in seen:
+                seen.add(key)
+                unique_jobs.append(j)
+
+        return unique_jobs[:limit]
+
+    # --- Fallback: in-memory scoring (no persisted scores yet) ---
+    from app.models.resume import Resume
+    from app.crud import job as crud_job
+    from app.services.scoring_service import ScoringService
+
+    stmt_resume = select(Resume).where(
         Resume.user_id == current_user.id,
         Resume.is_analyzed == True
     ).order_by(desc(Resume.analyzed_at)).limit(1)
-    
-    result = await db.execute(stmt)
-    resume = result.scalars().first()
-    
-    # Get all active jobs
-    from app.crud import job as crud_job
+    resume_result = await db.execute(stmt_resume)
+    resume = resume_result.scalars().first()
+
     all_jobs = await crud_job.get_multi(db, skip=0, limit=200)
-    
     if not all_jobs:
         return []
-    
-    # Extract resume skills
-    resume_skills = []
-    if resume:
-        try:
-            raw_skills = json.loads(resume.technical_skills) if resume.technical_skills else []
-            resume_skills = [str(s).lower() for s in raw_skills if s]
-        except:
-            resume_skills = []
-    
-    # Extract user preferences
-    user_techs = []
-    try:
-        raw_techs = json.loads(current_user.technologies) if current_user.technologies else []
-        user_techs = [str(s).lower() for s in raw_techs if s]
-    except:
-        pass
-    try:
-        user_work_models = json.loads(current_user.work_models) if current_user.work_models else []
-    except:
-        pass
-    try:
-        user_job_titles = json.loads(current_user.job_titles) if current_user.job_titles else []
-    except:
-        pass
-    try:
-        user_locations = json.loads(current_user.preferred_locations) if current_user.preferred_locations else []
-    except:
-        pass
-    try:
-        user_industries = json.loads(current_user.industries) if current_user.industries else []
-    except:
-        pass
-    
-    user_salary_min = current_user.salary_min
-    user_salary_max = current_user.salary_max
-    user_seniority = current_user.seniority_level
-    
-    # Combine resume skills + user-selected technologies (unique)
-    all_skills = list(set(resume_skills + user_techs))
-    
-    # Score each job
-    scored_jobs = []
+
+    preferences = ScoringService.extract_skills_and_preferences(current_user, resume)
     for job in all_jobs:
-        score = 0.0
-        max_score = 0.0
-        
-        job_title = str(job.title or "").lower()
-        job_text = f"{job_title} {str(job.description or '').lower()} {str(job.requirements or '').lower()}"
-        job_title_lower = job_title
-        
-        # 1. Technology/Skill Match (weight: 35)
-        if all_skills:
-            max_score += 35
-            match_count = sum(1 for skill in all_skills if skill in job_text)
-            score += (match_count / max(len(all_skills), 1)) * 35
-        
-        # 2. Job Title Match (weight: 25)
-        if user_job_titles:
-            max_score += 25
-            title_match = any(t.lower() in job_title_lower for t in user_job_titles)
-            if title_match:
-                score += 25
-            else:
-                # Partial match
-                partial = sum(1 for t in user_job_titles if any(word in job_title_lower for word in t.lower().split()))
-                score += (partial / len(user_job_titles)) * 15
-        
-        # 3. Work Model Match (weight: 15)
-        if user_work_models:
-            max_score += 15
-            user_wants_remote = any(m.lower() in ["remote", "remoto"] for m in user_work_models)
-            user_wants_hybrid = any(m.lower() in ["hybrid", "híbrido", "hibrido"] for m in user_work_models)
-            
-            if user_wants_remote and job.is_remote:
-                score += 15
-            elif user_wants_hybrid and ("hybrid" in job_text or "híbrido" in job_text):
-                score += 15
-            elif not user_wants_remote and not job.is_remote:
-                score += 10  # User prefers in-person and job is in-person
-        
-        # 4. Salary Match (weight: 10)
-        if user_salary_min and job.salary_max:
-            max_score += 10
-            if job.salary_max >= user_salary_min:
-                score += 10
-            elif job.salary_max >= user_salary_min * 0.8:
-                score += 5  # Within 80% of desired minimum
-        
-        # 5. Location Match (weight: 10)
-        if user_locations and job.location:
-            max_score += 10
-            loc_match = any(loc.lower() in job.location.lower() for loc in user_locations)
-            if loc_match:
-                score += 10
-        
-        # 6. Seniority Match (weight: 5)
-        if user_seniority:
-            max_score += 5
-            seniority_lower = user_seniority.lower()
-            if seniority_lower in job_title_lower or seniority_lower in job_text:
-                score += 5
-        
-        # Calculate percentage - Default to 0 instead of returning nothing
-        final_score = min(int((score / max_score) * 100), 95) if max_score > 0 else 0
-        job.compatibility_score = final_score
-        scored_jobs.append(job)
-    
-    # Sort by score descending. If scores are 0, it sorts by newest/id via the original query anyway
-    scored_jobs.sort(key=lambda x: (x.compatibility_score or 0, float(x.id)), reverse=True)
-    
-    # Filter out duplicates at runtime to clean up the UI
+        job.compatibility_score = ScoringService.calculate_score(job, preferences)
+
+    all_jobs.sort(key=lambda x: (x.compatibility_score or 0, float(x.id)), reverse=True)
+
     unique_jobs = []
     seen = set()
-    for j in scored_jobs:
-        title_safe = str(j.title or "Unknown").lower()
-        company_safe = str(j.company or "").lower()
-        identifier = f"{title_safe}|{company_safe}"
-        if identifier not in seen:
-            seen.add(identifier)
+    for j in all_jobs:
+        key = f"{str(j.title or '').lower()}|{str(j.company or '').lower()}"
+        if key not in seen:
+            seen.add(key)
             unique_jobs.append(j)
-            
+
     return unique_jobs[:limit]
 
 
@@ -242,15 +168,21 @@ async def search_jobs(
     *,
     db: AsyncSession = Depends(deps.get_db),
     query: str,
-    limit: int = 20,
+    limit: int = 10000,
+    max_saved_jobs: int = 100,
     current_user = Depends(deps.get_current_active_user),
 ) -> Any:
     """
-    Search for jobs using active scrapers.
+    Search for jobs using active scrapers, scores them in memory, and saves the top N to db.
     """
     from app.services.job_service import JobService
     job_service = JobService(db)
-    new_jobs = await job_service.search_and_save_jobs(query=query, limit=limit)
+    new_jobs = await job_service.search_and_save_jobs(
+        query=query, 
+        limit=limit, 
+        user_for_scoring=current_user,
+        max_saved_jobs=max_saved_jobs
+    )
     return new_jobs
 
 

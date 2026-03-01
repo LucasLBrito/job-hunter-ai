@@ -7,6 +7,7 @@ from datetime import datetime
 
 from app.services.scrapers.base import BaseScraper
 from app.services.scrapers.models import ScrapedJob
+from app.infrastructure.proxies.manager import proxy_manager
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +45,17 @@ class CathoScraper(BaseScraper):
 
         jobs = []
         try:
-            async with httpx.AsyncClient(timeout=15.0, follow_redirects=True) as client:
+            # Request working proxy
+            proxy_url = await proxy_manager.get_working_proxy()
+            client_args = {"timeout": 15.0, "follow_redirects": True}
+            
+            if proxy_url:
+                logger.info(f"CathoScraper: Utilizando proxy {proxy_url}")
+                client_args["proxies"] = f"http://{proxy_url}"
+            else:
+                logger.warning("CathoScraper: Nenhum proxy disponível ou funcionando. Tentando direto.")
+
+            async with httpx.AsyncClient(**client_args) as client:
                 response = await client.get(url, headers=headers)
                 
                 if response.status_code != 200:

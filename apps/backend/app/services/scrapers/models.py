@@ -25,4 +25,7 @@ class ScrapedJob(BaseModel):
     technologies: List[str] = []
     employment_type: Optional[str] = None  # e.g., "Full-time", "Contract"
     seniority_level: Optional[str] = None  # e.g., "Junior", "Senior"
+    
+    # Internal score generated during search
+    compatibility_score: Optional[float] = None
 
