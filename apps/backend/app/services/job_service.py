@@ -51,10 +51,11 @@ class JobService:
         self.scrapers.append(WorkanaScraper())
         self.scrapers.append(FreelaScraper())
 
-    async def search_and_save_jobs(self, query: str, limit: int = 50) -> List[Job]:
+    async def search_and_save_jobs(self, query: str, limit: int = 50, user_for_scoring = None, max_saved_jobs: int = 100) -> List[Job]:
         """
         Search for jobs across ALL configured scrapers and save new ones to DB.
         Runs scrapers in parallel for speed.
+        If user_for_scoring is provided, it will score the jobs in memory and only save the top `max_saved_jobs`.
         """
         all_new_jobs = []
         
@@ -78,6 +79,37 @@ class JobService:
             logger.info("No jobs found from scrapers. Adding seed jobs for testing.")
             all_scraped = self._get_seed_jobs(query)
             
+        # Score jobs in memory to save only the most relevant ones
+        if user_for_scoring:
+            from app.services.scoring_service import ScoringService
+            from sqlalchemy import select, desc
+            from app.models.resume import Resume
+            
+            # Get user's most recent analyzed resume completely independently
+            try:
+                stmt = select(Resume).where(
+                    Resume.user_id == user_for_scoring.id,
+                    Resume.is_analyzed == True
+                ).order_by(desc(Resume.analyzed_at)).limit(1)
+                result = await self.db.execute(stmt)
+                resume = result.scalars().first()
+            except Exception as e:
+                logger.warning(f"Could not load resume for scoring: {e}")
+                resume = None
+                
+            preferences = ScoringService.extract_skills_and_preferences(user_for_scoring, resume)
+            
+            # Score each scraped job
+            for job in all_scraped:
+                job.compatibility_score = ScoringService.calculate_score(job, preferences)
+                
+            # Sort descending by score
+            all_scraped.sort(key=lambda x: x.compatibility_score or 0, reverse=True)
+            
+            # Keep only the top `max_saved_jobs` to prevent DB bloat
+            all_scraped = all_scraped[:max_saved_jobs]
+            logger.info(f"Trimmed to top {len(all_scraped)} jobs based on user profile scoring.")
+            
         # Save to database with deduplication
         for scraped_job in all_scraped:
             try:
@@ -86,6 +118,20 @@ class JobService:
                     self.db, external_id=scraped_job.external_id
                 )
                 if existing_job:
+                    if user_for_scoring:
+                        try:
+                            from app.crud.user_job import user_job as crud_user_job
+                            score = getattr(scraped_job, "compatibility_score", None) or 0
+                            await crud_user_job.create_or_update(
+                                self.db,
+                                user_id=user_for_scoring.id,
+                                job_id=existing_job.id,
+                                score=score
+                            )
+                        except Exception as e:
+                            logger.warning(f"Could not update UserJob score for existing job {existing_job.id}: {e}")
+                    # Add to return list even if it already exists, so the frontend gets all results
+                    all_new_jobs.append(existing_job)
                     continue
                 
                 # Extra deduplication by Title + Company to avoid overlapping sources
@@ -96,7 +142,21 @@ class JobService:
                         Job.company == scraped_job.company
                     )
                 )
-                if existing_by_name.scalars().first():
+                existing_job_by_name = existing_by_name.scalars().first()
+                if existing_job_by_name:
+                    if user_for_scoring:
+                        try:
+                            from app.crud.user_job import user_job as crud_user_job
+                            score = getattr(scraped_job, "compatibility_score", None) or 0
+                            await crud_user_job.create_or_update(
+                                self.db,
+                                user_id=user_for_scoring.id,
+                                job_id=existing_job_by_name.id,
+                                score=score
+                            )
+                        except Exception as e:
+                            logger.warning(f"Could not update UserJob score for existing job {existing_job_by_name.id}: {e}")
+                    all_new_jobs.append(existing_job_by_name)
                     continue
                     
                 # Save new job
@@ -112,11 +172,26 @@ class JobService:
                     requirements=None,
                     source_platform=scraped_job.source_platform,
                     source_url=scraped_job.url,
-                    external_id=scraped_job.external_id
+                    external_id=scraped_job.external_id,
+                    compatibility_score=getattr(scraped_job, "compatibility_score", None)
                 )
                 
                 new_job = await crud_job.create(self.db, obj_in=job_in)
-                
+
+                # Save user-specific score in the UserJob table
+                if user_for_scoring:
+                    try:
+                        from app.crud.user_job import user_job as crud_user_job
+                        score = getattr(scraped_job, "compatibility_score", None) or 0
+                        await crud_user_job.create_or_update(
+                            self.db,
+                            user_id=user_for_scoring.id,
+                            job_id=new_job.id,
+                            score=score
+                        )
+                    except Exception as e:
+                        logger.warning(f"Could not save UserJob score for job {new_job.id}: {e}")
+
                 # Generate & Store Embedding (Pinecone) — optional
                 try:
                     from app.services.embedding_service import EmbeddingService
@@ -147,7 +222,7 @@ class JobService:
             except Exception as e:
                 logger.error(f"Error saving job '{scraped_job.title}': {e}")
                 
-        logger.info(f"Saved {len(all_new_jobs)} new jobs for query '{query}'")
+        logger.info(f"Returning {len(all_new_jobs)} jobs for query '{query}'")
         return all_new_jobs
 
     def _get_seed_jobs(self, query: str) -> List[ScrapedJob]:

@@ -35,6 +35,13 @@ from app.schemas.resume import (
     ResumeResponse
 )
 
+from app.schemas.user_job import (
+    UserJobBase,
+    UserJobCreate,
+    UserJobUpdate,
+    UserJobResponse
+)
+
 __all__ = [
     # User
     "UserBase",
@@ -63,4 +70,9 @@ __all__ = [
     "ResumeCreate", 
     "ResumeUpdate",
     "ResumeResponse",
+    # UserJob
+    "UserJobBase",
+    "UserJobCreate",
+    "UserJobUpdate",
+    "UserJobResponse",
 ]

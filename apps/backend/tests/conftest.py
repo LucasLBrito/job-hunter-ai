@@ -1,80 +1,60 @@
 import pytest
-import asyncio
-from typing import AsyncGenerator, Generator
+import pytest_asyncio
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
-from app.database import Base, get_db
+
 from app.main import app
-from app.core.config import settings
-# Import models to register them with XML/Metadata
-from app.models.user import User
-from app.models.job import Job
-from app.models.resume import Resume
-from app.models.application import Application
-import os
-import logging
+from app.database import Base, get_db
 
-# Configure logging to file
-logging.basicConfig(
-    filename='sqlalchemy.log',
-    filemode='w',
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+# Use an in-memory SQLite database for fast unit testing with aiosqlite
+SQLALCHEMY_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
+
+engine = create_async_engine(
+    SQLALCHEMY_DATABASE_URL, 
+    connect_args={"check_same_thread": False},
+    # poolclass=StaticPool # if needed for in-memory sharing
 )
-logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
+TestingSessionLocal = async_sessionmaker(autocommit=False, autoflush=False, bind=engine, class_=AsyncSession)
 
-# Use an in-memory SQLite database for tests
-TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
-
-@pytest.fixture(scope="session")
-def event_loop() -> Generator:
-    """Create an instance of the default event loop for each test case."""
-    loop = asyncio.new_event_loop()
-    yield loop
-    loop.close()
-
-@pytest.fixture(scope="session")
-async def db_engine():
-    engine = create_async_engine(
-        "sqlite+aiosqlite:///:memory:",
-        echo=True,
-        connect_args={"check_same_thread": False}
-    )
+@pytest_asyncio.fixture(scope="session", autouse=True)
+async def setup_db():
+    # Import all models so Base knows about them before create_all
+    from app.models.user import User
+    from app.models.job import Job
+    from app.models.resume import Resume
+    from app.models.user_job import UserJob
     
-    # Create tables
+    # Create all tables in the in-memory database
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-    
-    yield engine
-    
+    yield
+    # Drop all tables after tests finish
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
-    
-    await engine.dispose()
 
-@pytest.fixture
-async def db(db_engine) -> AsyncGenerator[AsyncSession, None]:
-    """
-    Get a test database session.
-    """
-    async_session = async_sessionmaker(db_engine, expire_on_commit=False)
-    
-    async with async_session() as session:
-        yield session
+@pytest_asyncio.fixture()
+async def db(setup_db):
+    try:
+        async with TestingSessionLocal() as session:
+            yield session
+    finally:
+        # Rollback any uncommitted transactions from tests to keep state clean
+        async with engine.begin() as conn:
+            for table in reversed(Base.metadata.sorted_tables):
+                await conn.execute(table.delete())
 
-@pytest.fixture
-async def client(db: AsyncSession) -> AsyncGenerator[AsyncClient, None]:
-    """
-    Get a test client with the test database dependency override.
-    """
-    from httpx import ASGITransport
-
-    def override_get_db():
+@pytest_asyncio.fixture()
+async def client(db):
+    async def override_get_db():
         yield db
 
+    # Override the dependency globally 
     app.dependency_overrides[get_db] = override_get_db
     
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
-        yield c
+    from httpx import ASGITransport
+    transport = ASGITransport(app=app)
     
+    async with AsyncClient(transport=transport, base_url="http://test") as c:
+        yield c
+    # Clean up override
     app.dependency_overrides.clear()

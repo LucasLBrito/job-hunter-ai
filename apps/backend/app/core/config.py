@@ -24,7 +24,7 @@ class Settings(BaseSettings):
     # CORS
     # CORS
     # Allowing all for production flexibility initially - secure this later!
-    ALLOWED_ORIGINS: Union[List[str], str] = ["*"]
+    ALLOWED_ORIGINS: Union[List[str], str] = ["http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:8000"]
 
     @field_validator("ALLOWED_ORIGINS", mode="before")
     @classmethod
