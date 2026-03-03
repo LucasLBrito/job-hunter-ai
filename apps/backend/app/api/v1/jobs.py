@@ -194,73 +194,37 @@ async def delete_job(
     job = await crud.job.remove(db=db, id=job_id)
     return job
 
-@router.post("/search")
+@router.post("/search", response_model=List[schemas.JobResponse])
 async def search_jobs(
     *,
-    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(deps.get_db),
     query: str = "",
-    limit: int = 10000,
-    max_saved_jobs: int = 100,
+    limit: int = 100,
     current_user = Depends(deps.get_current_active_user),
 ) -> Any:
     """
-    API Gateway pattern for job searching.
-    Triggers the scraping process in the background to fetch jobs in batches (100 every 5s)
-    and scores them against the user profile. The UI can then fetch them from the database
-    ordered by compatibility score.
+    Search jobs directly from the PostgreSQL database (Serving Layer).
+    No background scraping is triggered here anymore.
     """
-    from app.services.job_service import JobService
+    from sqlalchemy import select
+    from app.models.job import Job as JobModel
     
-    # We create a new DB session for the background task to avoid session closure issues
-    async def bg_scrape_task(user_id: int, query: str, limit: int, max_saved_jobs: int):
-        from app.db.session import async_session_maker
-        from app.crud.user import user as crud_user
+    stmt = select(JobModel)
+    
+    if query and query.strip():
+        search_term = f"%{query.strip()}%"
+        stmt = stmt.where(
+            (JobModel.title.ilike(search_term)) | 
+            (JobModel.description.ilike(search_term)) |
+            (JobModel.company.ilike(search_term))
+        )
         
-        async with async_session_maker() as bg_db:
-            try:
-                job_service = JobService(bg_db)
-                # Fetch user again in the new session to avoid detached instance errors
-                user = await crud_user.get(bg_db, id=user_id)
-                if user:
-                    search_query = query
-                    # Se não enviou query manual, puxa do perfil do usuário para ser mais assertivo
-                    if not search_query or search_query.strip() == "":
-                        from app.services.scoring_service import ScoringService
-                        from sqlalchemy import select, desc
-                        from app.models.resume import Resume
-                        
-                        stmt = select(Resume).where(
-                            Resume.user_id == user.id,
-                            Resume.is_analyzed == True
-                        ).order_by(desc(Resume.analyzed_at)).limit(1)
-                        result = await bg_db.execute(stmt)
-                        resume = result.scalars().first()
-                        
-                        prefs = ScoringService.extract_skills_and_preferences(user, resume)
-                        titles = prefs.get('job_titles', [])
-                        
-                        if titles:
-                            search_query = titles[0] # Pega o primeiro cargo desejado do perfil
-                        else:
-                            search_query = "Desenvolvedor" # fallback
-                            
-                        import logging
-                        logging.getLogger(__name__).info(f"Auto-profile search using query: {search_query}")
-
-                    await job_service.search_and_save_jobs(
-                        query=search_query, 
-                        limit=limit, 
-                        user_for_scoring=user,
-                        max_saved_jobs=max_saved_jobs
-                    )
-            except Exception as e:
-                import logging
-                logging.getLogger(__name__).error(f"Background scraping failed: {e}")
-
-    background_tasks.add_task(bg_scrape_task, current_user.id, query, limit, max_saved_jobs)
+    # Order by newest first
+    stmt = stmt.order_by(JobModel.id.desc()).limit(limit)
+    result = await db.execute(stmt)
+    jobs = result.scalars().all()
     
-    return {"message": "Busca em andamento no background. Atualize a página ou aguarde para ver os resultados ordenados por score."}
+    return jobs
 
 
 @router.post("/analyze-batch")
