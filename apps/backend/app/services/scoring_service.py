@@ -2,7 +2,7 @@ import json
 from typing import List, Optional
 from app.models.user import User
 from app.models.resume import Resume
-from app.services.scrapers.models import ScrapedJob
+from app.services.jobsearch.models import ScrapedJob
 from app.models.job import Job
 
 class ScoringService:

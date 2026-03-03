@@ -3,11 +3,13 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'next/navigation';
-import { Search, Loader2 } from 'lucide-react';
+import { useInView } from 'react-intersection-observer';
+import { Search, Loader2, ArrowLeft } from 'lucide-react';
 import api from '@/lib/api';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { JobCard } from '@/components/job-card';
+import { useRouter } from 'next/navigation';
 
 function JobsPageContent() {
     const searchParams = useSearchParams();
@@ -17,6 +19,13 @@ function JobsPageContent() {
     const [limit, setLimit] = useState(10);
     const [jobs, setJobs] = useState<any[]>([]);
     const [hasInitialSearched, setHasInitialSearched] = useState(false);
+    const router = useRouter();
+
+    // Pagination state
+    const [offset, setOffset] = useState(0);
+    const [hasMore, setHasMore] = useState(true);
+    const [isLoadingMore, setIsLoadingMore] = useState(false);
+    const { ref: loadMoreRef, inView } = useInView();
 
     // Fetch suggestions (resume data)
     const { data: suggestionsData } = useQuery({
@@ -31,29 +40,75 @@ function JobsPageContent() {
 
     const searchMutation = useMutation({
         mutationFn: async (searchQuery: string) => {
+            // Trigger the background search API Gateway
             const res = await api.post(`/jobs/search?query=${encodeURIComponent(searchQuery)}&limit=${limit}`);
             return res.data;
         },
         onSuccess: (data) => {
-            setJobs(data);
+            alert(data.message || "Busca iniciada em background!");
+            // Instead of expecting jobs here, we trigger a refetch of recommended jobs
+            fetchJobsFromDb();
         }
     });
+
+    // Helper to fetch jobs from DB (sorted by score, optionally filtered by search text)
+    const fetchJobsFromDb = async (resetList = false, currentOffset = 0, q = query) => {
+        if (isLoadingMore) return;
+
+        try {
+            if (!resetList) setIsLoadingMore(true);
+
+            // Build the URL with limits and text filtering
+            let url = `/jobs/recommended?limit=${limit}&offset=${currentOffset}`;
+            if (q && q.trim() !== '') {
+                url += `&query=${encodeURIComponent(q.trim())}`;
+            }
+
+            const res = await api.get(url);
+            const newJobs = res.data;
+
+            if (newJobs.length < limit) {
+                setHasMore(false); // Stop infinite loading if we get less than requested
+            }
+
+            setJobs(prev => {
+                if (resetList) return newJobs;
+
+                // Deduplicate by ID to prevent React key errors
+                const existingIds = new Set(prev.map(j => j.id));
+                const uniqueNewJobs = newJobs.filter((j: any) => !existingIds.has(j.id));
+                return [...prev, ...uniqueNewJobs];
+            });
+            setOffset(currentOffset + limit);
+
+        } catch (error) {
+            console.error("Error fetching recommended jobs:", error);
+        } finally {
+            setIsLoadingMore(false);
+        }
+    };
+
+    // Trigger loading more when user scrolls to bottom
+    useEffect(() => {
+        if (inView && hasMore && hasInitialSearched && jobs.length > 0 && !isLoadingMore) {
+            fetchJobsFromDb(false, offset);
+        }
+    }, [inView]);
 
     // Auto-search if URL has query on spawn
     useEffect(() => {
         if (urlQuery && !hasInitialSearched) {
             setHasInitialSearched(true);
             searchMutation.mutate(urlQuery);
+        } else if (!hasInitialSearched) {
+            setHasInitialSearched(true);
+            // Load initial jobs from DB with infinite scroll support
+            fetchJobsFromDb(true, 0, query);
         }
     }, [urlQuery, hasInitialSearched, searchMutation]);
 
-    // Auto-fill query from resume if available and query is empty
-    useEffect(() => {
-        if (suggestionsData?.suggestions?.job_titles?.length && !query && !urlQuery) {
-            const suggestedTitle = suggestionsData.suggestions.job_titles[0];
-            setQuery(suggestedTitle);
-        }
-    }, [suggestionsData, query, urlQuery]);
+    // Auto-fill query temporarily disabled natively per user request
+    // to allow placeholder visibility on empty load.
 
     const analyzeMutation = useMutation({
         mutationFn: async (jobId: number) => {
@@ -64,7 +119,6 @@ function JobsPageContent() {
 
     const handleSearch = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!query.trim()) return;
         searchMutation.mutate(query);
     };
 
@@ -75,11 +129,16 @@ function JobsPageContent() {
 
     return (
         <div className="max-w-7xl mx-auto space-y-8">
-            <div className="flex flex-col space-y-2">
-                <h1 className="text-3xl font-bold tracking-tight">Job Search</h1>
-                <p className="text-muted-foreground">
-                    Find jobs across multiple platforms and analyze them with AI.
-                </p>
+            <div className="flex items-center space-x-4">
+                <Button variant="ghost" size="icon" onClick={() => router.push('/dashboard')}>
+                    <ArrowLeft className="h-6 w-6" />
+                </Button>
+                <div className="flex flex-col space-y-2">
+                    <h1 className="text-3xl font-bold tracking-tight">Job Search</h1>
+                    <p className="text-muted-foreground">
+                        Find jobs across multiple platforms and analyze them with AI.
+                    </p>
+                </div>
             </div>
 
             {/* Search Bar */}
@@ -94,21 +153,55 @@ function JobsPageContent() {
                         onChange={(e) => setQuery(e.target.value)}
                     />
                 </div>
-                <Button type="submit" disabled={searchMutation.isPending}>
-                    {searchMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Search Jobs"}
-                </Button>
+                <div className="flex gap-2">
+                    <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => {
+                            setOffset(0);
+                            setHasMore(true);
+                            fetchJobsFromDb(true, 0, query);
+                        }}
+                        className="w-40"
+                    >
+                        Filter & Refresh
+                    </Button>
+                    <Button type="submit" disabled={searchMutation.isPending} className="flex-1">
+                        {searchMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : (query.trim() ? "Search & Score Jobs in Background" : "Auto-Search by Profile")}
+                    </Button>
+                </div>
             </form>
 
             {/* Results */}
             {jobs.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {jobs.map((job) => (
-                        <JobCard key={job.id} job={job} onAnalyze={onAnalyzeUpdate} />
-                    ))}
-                </div>
+                <>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {jobs.map((job) => (
+                            <JobCard key={job.id} job={job} onAnalyze={onAnalyzeUpdate} />
+                        ))}
+                    </div>
+
+                    {/* Infinite Scroll Trigger */}
+                    {hasMore && (
+                        <div ref={loadMoreRef} className="flex justify-center py-6">
+                            {isLoadingMore ? (
+                                <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
+                            ) : (
+                                <p className="text-gray-400 text-sm">Scroll for more</p>
+                            )}
+                        </div>
+                    )}
+
+                    {!hasMore && jobs.length > 0 && (
+                        <div className="text-center py-12 text-gray-500">
+                            You've reached the end of the matching jobs.
+                            If you want more, try clicking "Search & Score Jobs in Background" to fetch directly from platforms!
+                        </div>
+                    )}
+                </>
             ) : (
                 <div className="text-center py-12 text-gray-500">
-                    {searchMutation.isSuccess ? "No jobs found. Try a different query." : "Enter a keyword to start searching."}
+                    {searchMutation.isSuccess ? "No jobs found for this keyword in your database. Click Auto-Search to fetch new ones!" : "Enter a keyword or click Auto-Search by Profile."}
                 </div>
             )}
         </div>

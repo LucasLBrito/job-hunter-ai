@@ -4,12 +4,22 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
 from datetime import datetime
 
-from app.services.scrapers.base import BaseScraper
-from app.services.scrapers.remoteok import RemoteOKScraper
-from app.services.scrapers.jobspy_scraper import JobSpyScraper
-from app.services.scrapers.adzuna_scraper import AdzunaScraper
-from app.services.scrapers.vagas_scraper import VagasScraper
-from app.services.scrapers.models import ScrapedJob
+from app.services.jobsearch.base import BaseScraper
+from app.services.jobsearch.remoteok import RemoteOKScraper
+from app.services.jobsearch.jobspy_scraper import JobSpyScraper
+from app.services.jobsearch.adzuna import AdzunaScraper
+from app.services.jobsearch.vagas import VagasScraper
+from app.services.jobsearch.gupy import GupyScraper
+from app.services.jobsearch.programathor import ProgramaThorScraper
+from app.services.jobsearch.geekhunter import GeekHunterScraper
+from app.services.jobsearch.coodesh import CoodeshScraper
+from app.services.jobsearch.apinfo import APInfoScraper
+from app.services.jobsearch.remotar import RemotarScraper
+from app.services.jobsearch.weworkremotely import WeWorkRemotelyScraper
+from app.services.jobsearch.workana import WorkanaScraper
+from app.services.jobsearch.freela import FreelaScraper
+from app.services.jobsearch.cathoscraper import CathoScraper
+from app.services.jobsearch.models import ScrapedJob
 from app.models.job import Job
 from app.crud import job as crud_job
 from app.schemas.job import JobCreate
@@ -29,18 +39,6 @@ class JobService:
         self.scrapers.append(RemoteOKScraper())
         self.scrapers.append(AdzunaScraper())
         self.scrapers.append(VagasScraper())
-
-        # ── Novos scrapers do engine de 20 plataformas ──────────────────────
-        # TI Brasil
-        from app.services.scrapers.gupy_scraper import GupyScraper
-        from app.services.scrapers.ti_brasil_scrapers import (
-            ProgramaThorScraper, GeekHunterScraper, CoodeshScraper, APInfoScraper
-        )
-        # Remoto
-        from app.services.scrapers.remote_scrapers import RemotarScraper, WeWorkRemotelyScraper
-        # Freelance
-        from app.services.scrapers.freelance_scrapers import WorkanaScraper, FreelaScraper
-
         self.scrapers.append(GupyScraper())
         self.scrapers.append(ProgramaThorScraper())
         self.scrapers.append(GeekHunterScraper())
@@ -50,28 +48,44 @@ class JobService:
         self.scrapers.append(WeWorkRemotelyScraper())
         self.scrapers.append(WorkanaScraper())
         self.scrapers.append(FreelaScraper())
+        self.scrapers.append(CathoScraper())
 
-    async def search_and_save_jobs(self, query: str, limit: int = 50, user_for_scoring = None, max_saved_jobs: int = 100) -> List[Job]:
+    async def search_and_save_jobs(self, query: str, limit: int = 200, user_for_scoring = None, max_saved_jobs: int = 100) -> List[Job]:
         """
         Search for jobs across ALL configured scrapers and save new ones to DB.
-        Runs scrapers in parallel for speed.
+        Runs scrapers concurrently (3 at a time via semaphore) for high throughput.
         If user_for_scoring is provided, it will score the jobs in memory and only save the top `max_saved_jobs`.
         """
-        all_new_jobs = []
-        
-        # Run all scrapers in parallel
-        scraper_tasks = []
-        for scraper in self.scrapers:
-            scraper_tasks.append(
-                self._run_scraper_safe(scraper, query, limit)
-            )
-        
-        results = await asyncio.gather(*scraper_tasks)
-        
-        # Flatten results from all scrapers
         all_scraped = []
-        for scraper_results in results:
-            all_scraped.extend(scraper_results)
+        
+        # Higher limit per scraper for volume
+        jobs_per_scraper = max(30, limit // max(1, len(self.scrapers)))
+        
+        # Semaphore to limit concurrent scrapers (avoid overwhelming network/IP)
+        sem = asyncio.Semaphore(3)
+        
+        async def run_with_semaphore(scraper):
+            async with sem:
+                name = type(scraper).__name__
+                try:
+                    logger.info(f"Fetching {jobs_per_scraper} jobs from {name} for '{query}'...")
+                    results = await self._run_scraper_safe(scraper, query, jobs_per_scraper)
+                    # Small delay after each scraper to avoid IP blocks
+                    await asyncio.sleep(2)
+                    return results
+                except Exception as e:
+                    logger.error(f"Error orchestrating {name}: {e}")
+                    return []
+        
+        # Run all scrapers concurrently (semaphore limits to 3 at a time)
+        tasks = [run_with_semaphore(s) for s in self.scrapers]
+        results_list = await asyncio.gather(*tasks, return_exceptions=True)
+        
+        for result in results_list:
+            if isinstance(result, list):
+                all_scraped.extend(result)
+            elif isinstance(result, Exception):
+                logger.error(f"Scraper task failed: {result}")
         
         logger.info(f"Total scraped jobs across all platforms: {len(all_scraped)}")
         
