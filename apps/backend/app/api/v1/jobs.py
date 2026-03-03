@@ -1,5 +1,5 @@
 from typing import Any, List
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import crud, schemas
@@ -37,7 +37,9 @@ async def create_job(
 @router.get("/recommended", response_model=List[schemas.JobResponse])
 async def get_recommended_jobs(
     db: AsyncSession = Depends(deps.get_db),
+    query: str = None,
     limit: int = 10,
+    offset: int = 0,
     current_user = Depends(deps.get_current_active_user),
 ) -> Any:
     """
@@ -52,12 +54,24 @@ async def get_recommended_jobs(
     print(f"DEBUG: get_recommended_jobs for user {current_user.id}")
 
     # --- Primary path: read from user_jobs table ---
+    # We join with UserJob so we can order by the custom compatibility score
+    query_builder = select(JobModel).join(UserJob, UserJob.job_id == JobModel.id).where(UserJob.user_id == current_user.id)
+    
+    if query and query.strip():
+        search_term = f"%{query.strip()}%"
+        # We use ilike to make it case-insensitive
+        query_builder = query_builder.where(
+            (JobModel.title.ilike(search_term)) | 
+            (JobModel.description.ilike(search_term)) |
+            (JobModel.company.ilike(search_term))
+        )
+        
     stmt = (
-        select(JobModel)
-        .join(UserJob, UserJob.job_id == JobModel.id)
-        .where(UserJob.user_id == current_user.id)
-        .order_by(UserJob.compatibility_score.desc().nullslast())
-        .limit(limit * 2)  # extra room for dedup
+        query_builder
+        .order_by(UserJob.compatibility_score.desc().nullslast(), JobModel.id.desc())
+        .offset(offset)
+        # Fetch a bit more than limit in case we need to dedup same title/company combos downstream
+        .limit(limit * 3)
     )
     result = await db.execute(stmt)
     db_scored_jobs = result.scalars().all()
@@ -93,8 +107,21 @@ async def get_recommended_jobs(
     ).order_by(desc(Resume.analyzed_at)).limit(1)
     resume_result = await db.execute(stmt_resume)
     resume = resume_result.scalars().first()
-
-    all_jobs = await crud_job.get_multi(db, skip=0, limit=200)
+    
+    # Fetch chunk from jobs table directly
+    fallback_query = select(JobModel)
+    if query and query.strip():
+        search_term = f"%{query.strip()}%"
+        fallback_query = fallback_query.where(
+            (JobModel.title.ilike(search_term)) | 
+            (JobModel.description.ilike(search_term)) |
+            (JobModel.company.ilike(search_term))
+        )
+    # Fetch a massive chunk from jobs table directly to have a good pool for scoring
+    fallback_query = fallback_query.order_by(JobModel.id.desc()).offset(offset).limit(limit * 50)
+    fallback_result = await db.execute(fallback_query)
+    all_jobs = fallback_result.scalars().all()
+    
     if not all_jobs:
         return []
 
@@ -102,6 +129,7 @@ async def get_recommended_jobs(
     for job in all_jobs:
         job.compatibility_score = ScoringService.calculate_score(job, preferences)
 
+    # Sort descending by score
     all_jobs.sort(key=lambda x: (x.compatibility_score or 0, float(x.id)), reverse=True)
 
     unique_jobs = []
@@ -111,8 +139,11 @@ async def get_recommended_jobs(
         if key not in seen:
             seen.add(key)
             unique_jobs.append(j)
+            
+            if len(unique_jobs) >= limit:
+                break
 
-    return unique_jobs[:limit]
+    return unique_jobs
 
 
 @router.get("/{job_id}", response_model=schemas.JobResponse)
@@ -163,27 +194,73 @@ async def delete_job(
     job = await crud.job.remove(db=db, id=job_id)
     return job
 
-@router.post("/search", response_model=List[schemas.JobResponse])
+@router.post("/search")
 async def search_jobs(
     *,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(deps.get_db),
-    query: str,
+    query: str = "",
     limit: int = 10000,
     max_saved_jobs: int = 100,
     current_user = Depends(deps.get_current_active_user),
 ) -> Any:
     """
-    Search for jobs using active scrapers, scores them in memory, and saves the top N to db.
+    API Gateway pattern for job searching.
+    Triggers the scraping process in the background to fetch jobs in batches (100 every 5s)
+    and scores them against the user profile. The UI can then fetch them from the database
+    ordered by compatibility score.
     """
     from app.services.job_service import JobService
-    job_service = JobService(db)
-    new_jobs = await job_service.search_and_save_jobs(
-        query=query, 
-        limit=limit, 
-        user_for_scoring=current_user,
-        max_saved_jobs=max_saved_jobs
-    )
-    return new_jobs
+    
+    # We create a new DB session for the background task to avoid session closure issues
+    async def bg_scrape_task(user_id: int, query: str, limit: int, max_saved_jobs: int):
+        from app.db.session import async_session_maker
+        from app.crud.user import user as crud_user
+        
+        async with async_session_maker() as bg_db:
+            try:
+                job_service = JobService(bg_db)
+                # Fetch user again in the new session to avoid detached instance errors
+                user = await crud_user.get(bg_db, id=user_id)
+                if user:
+                    search_query = query
+                    # Se não enviou query manual, puxa do perfil do usuário para ser mais assertivo
+                    if not search_query or search_query.strip() == "":
+                        from app.services.scoring_service import ScoringService
+                        from sqlalchemy import select, desc
+                        from app.models.resume import Resume
+                        
+                        stmt = select(Resume).where(
+                            Resume.user_id == user.id,
+                            Resume.is_analyzed == True
+                        ).order_by(desc(Resume.analyzed_at)).limit(1)
+                        result = await bg_db.execute(stmt)
+                        resume = result.scalars().first()
+                        
+                        prefs = ScoringService.extract_skills_and_preferences(user, resume)
+                        titles = prefs.get('job_titles', [])
+                        
+                        if titles:
+                            search_query = titles[0] # Pega o primeiro cargo desejado do perfil
+                        else:
+                            search_query = "Desenvolvedor" # fallback
+                            
+                        import logging
+                        logging.getLogger(__name__).info(f"Auto-profile search using query: {search_query}")
+
+                    await job_service.search_and_save_jobs(
+                        query=search_query, 
+                        limit=limit, 
+                        user_for_scoring=user,
+                        max_saved_jobs=max_saved_jobs
+                    )
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).error(f"Background scraping failed: {e}")
+
+    background_tasks.add_task(bg_scrape_task, current_user.id, query, limit, max_saved_jobs)
+    
+    return {"message": "Busca em andamento no background. Atualize a página ou aguarde para ver os resultados ordenados por score."}
 
 
 @router.post("/analyze-batch")
