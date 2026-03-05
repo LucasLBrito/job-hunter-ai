@@ -84,12 +84,12 @@ services:
     networks:
       - jobhunter-net
 
-  # Scraper Worker (Raw Layer)
-  scraper-worker:
+  # Spider Worker (Raw Layer - High Volume Ingestion)
+  spider-worker:
     build:
       context: ./apps/backend
       dockerfile: Dockerfile
-    container_name: jobhunter-scraper
+    container_name: jobhunter-spider
     restart: unless-stopped
     volumes:
       - ./logs:/app/logs
@@ -98,8 +98,16 @@ services:
       - MONGO_DB_NAME=job_lake
       - REDIS_URL=redis://redis:6379/0
       - ENVIRONMENT=production
-    # The command will change to launch the scrapy process e.g. scrapy crawl my_spider
-    command: tail -f /dev/null
+    env_file:
+      - ./apps/backend/.env
+    # Run spider every 6 hours with all default queries
+    command: >
+      sh -c "while true; do
+        echo '🕷️ Starting Job Spider...';
+        python -m app.services.jobsearch.spider --limit 50 --concurrency 5;
+        echo '💤 Sleeping 6 hours...';
+        sleep 21600;
+      done"
     depends_on:
       - mongodb
       - redis
