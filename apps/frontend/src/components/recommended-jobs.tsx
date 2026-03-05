@@ -136,7 +136,7 @@ export default function RecommendedJobs() {
                             {searchMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Search className="mr-2 h-4 w-4" />}
                             Buscar Novas Vagas
                         </Button>
-                        <Button variant="outline" onClick={() => router.push('/dashboard/jobs')}>
+                        <Button variant="outline" onClick={() => router.push('/dashboard/explore')}>
                             Ver Todas
                         </Button>
                     </div>
