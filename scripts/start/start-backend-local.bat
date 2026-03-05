@@ -1,7 +1,7 @@
 @echo off
 REM Start Backend Server Locally (Windows)
 
-cd backend
+cd apps\backend
 
 REM Activate virtual environment
 if exist venv\Scripts\activate.bat (

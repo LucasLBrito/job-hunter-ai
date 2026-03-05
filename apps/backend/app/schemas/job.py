@@ -1,7 +1,8 @@
-from pydantic import BaseModel, Field, HttpUrl
+from pydantic import BaseModel, Field, HttpUrl, field_validator
 from typing import Optional, List
 from datetime import datetime
 from enum import Enum
+import json
 
 
 class JobSource(str, Enum):
@@ -15,6 +16,8 @@ class JobSource(str, Enum):
     ZIPRECRUITER = "zip_recruiter"
     ADZUNA = "adzuna"
     MANUAL = "manual"
+    VAGAS_COM_BR = "vagas.com.br"
+    CATHO = "catho"
 
 
 class JobBase(BaseModel):
@@ -64,6 +67,26 @@ class JobAnalysis(BaseModel):
     cons: Optional[List[str]] = None
 
 
+def _parse_json_list(v):
+    """Parse a JSON string into a list, handling all edge cases."""
+    if v is None:
+        return None
+    if isinstance(v, list):
+        return v
+    if isinstance(v, str):
+        v = v.strip()
+        if not v:
+            return None
+        try:
+            parsed = json.loads(v)
+            if isinstance(parsed, list):
+                return parsed
+            return [str(parsed)]
+        except (json.JSONDecodeError, TypeError):
+            return [v]
+    return None
+
+
 class JobResponse(JobBase):
     """Schema for job response"""
     id: int
@@ -84,9 +107,15 @@ class JobResponse(JobBase):
     
     # Timestamps
     posted_date: Optional[datetime] = None
-    found_date: datetime
+    found_date: Optional[datetime] = None
     analyzed_date: Optional[datetime] = None
-    created_at: datetime
+    created_at: Optional[datetime] = None
+
+    # Validators to handle JSON strings from DB Text columns
+    @field_validator("extracted_technologies", "pros", "cons", mode="before")
+    @classmethod
+    def parse_json_list_fields(cls, v):
+        return _parse_json_list(v)
     
     class Config:
         from_attributes = True

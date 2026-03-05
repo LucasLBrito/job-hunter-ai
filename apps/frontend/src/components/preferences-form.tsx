@@ -114,8 +114,8 @@ function CheckboxGroup({
                     type="button"
                     onClick={() => toggle(opt.value)}
                     className={`px-4 py-2 rounded-lg border text-sm font-medium transition-all ${selected.includes(opt.value)
-                            ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
-                            : 'bg-white text-gray-700 border-gray-300 hover:border-blue-400 hover:bg-blue-50'
+                        ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                        : 'bg-white text-gray-700 border-gray-300 hover:border-blue-400 hover:bg-blue-50'
                         }`}
                 >
                     {opt.label}
@@ -351,7 +351,30 @@ export default function PreferencesForm({ onSaved }: { onSaved?: () => void }) {
                 </div>
             )}
 
-            {/* 1. Cargo & Senioridade */}
+            {/* 1. Área de Atuação */}
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                        <Briefcase className="h-5 w-5 text-blue-600" />
+                        Área de Atuação
+                    </CardTitle>
+                    <CardDescription>Qual é a sua indústria ou área principal de trabalho?</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    <div>
+                        <Label className="mb-2 block">Setor / Indústria</Label>
+                        <TagInput
+                            tags={industries}
+                            onAdd={(t) => setIndustries([...industries, t])}
+                            onRemove={(t) => setIndustries(industries.filter(i => i !== t))}
+                            placeholder="Ex: Tecnologia da Informação, Saúde, Finanças..."
+                            suggestions={['Tecnologia da Informação', 'Finanças', 'Saúde', 'Educação', 'Varejo', 'Marketing', 'Engenharia', 'Design', 'Recursos Humanos', 'Vendas']}
+                        />
+                    </div>
+                </CardContent>
+            </Card>
+
+            {/* 1.5. Cargo & Senioridade */}
             <Card>
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2">

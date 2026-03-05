@@ -10,6 +10,7 @@ import api from '@/lib/api';
 import { Loader2 } from 'lucide-react';
 import RecommendedJobs from '@/components/recommended-jobs';
 import PreferencesPrompt from '@/components/preferences-prompt';
+import { ThemeToggle } from '@/components/theme-toggle';
 
 export default function DashboardPage() {
     const router = useRouter();
@@ -27,8 +28,7 @@ export default function DashboardPage() {
         queryFn: async () => {
             const res = await api.get('/stats/');
             return res.data;
-        },
-        enabled: isAuthenticated
+        }
     });
 
     if (!isAuthenticated) return null;
@@ -39,10 +39,11 @@ export default function DashboardPage() {
                 <div className="max-w-7xl mx-auto px-6 sm:px-10 lg:px-16">
                     <div className="flex justify-between h-20">
                         <div className="flex items-center">
-                            <h1 className="text-2xl font-bold">Job Hunter AI</h1>
+                            <h1 className="text-2xl font-bold dark:text-white">Job Hunter AI</h1>
                         </div>
                         <div className="flex items-center space-x-6">
-                            <span className="text-sm text-gray-500 hidden sm:inline-block">Welcome, {user?.full_name}</span>
+                            <ThemeToggle />
+                            <span className="text-sm text-gray-500 dark:text-gray-300 hidden sm:inline-block">Welcome, {user?.full_name}</span>
                             <Button variant="outline" onClick={() => { logout(); router.push('/login'); }}>
                                 Logout
                             </Button>
@@ -112,6 +113,7 @@ export default function DashboardPage() {
                             </CardHeader>
                             <CardContent className="grid grid-cols-2 gap-4">
                                 <Button variant="outline" onClick={() => router.push('/dashboard/jobs')}>Search Jobs</Button>
+                                <Button variant="outline" onClick={() => router.push('/dashboard/explore')}>🔍 Explorar Vagas</Button>
                                 <Button variant="outline" onClick={() => router.push('/dashboard/resumes')}>Upload Resume</Button>
                                 <Button variant="outline" onClick={() => router.push('/dashboard/preferences')}>🎯 Preferências</Button>
                                 <Button variant="outline" onClick={() => router.push('/dashboard/profile')}>Configure Profile</Button>

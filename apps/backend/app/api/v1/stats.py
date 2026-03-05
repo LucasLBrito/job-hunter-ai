@@ -19,11 +19,13 @@ async def get_stats(
     """
     Get usage statistics for the dashboard.
     """
+    print(f"DEBUG: get_stats for user {current_user.id}")
     # 1. Total Jobs Scraped (Global)
     result_jobs = await db.execute(select(func.count(Job.id)))
     total_jobs = result_jobs.scalar() or 0
+    print(f"DEBUG: total_jobs={total_jobs}")
     
-    # 2. Resumes Analyzed (Global/User?) - Let's do User's resumes
+    # 2. Resumes Analyzed (User)
     result_resumes = await db.execute(
         select(func.count(Resume.id)).where(
             Resume.user_id == current_user.id,

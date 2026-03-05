@@ -25,9 +25,10 @@ class MatcherService:
         except Exception as e:
             logger.error(f"Failed to initialize MatcherService client for {self.provider}: {e}")
 
-    async def analyze_fit(self, resume_text: str, job_description: str) -> Dict[str, Any]:
+    async def analyze_fit(self, resume_text: str, job_description: str, user_preferences: Dict[str, Any] = None) -> Dict[str, Any]:
         """
         Compare resume with job description and return match score, pros, and cons.
+        Also uses user_preferences if provided to weigh the fit based on the user's explicit choices.
         """
         if not self.client:
              logger.error("MatcherService client not initialized.")
@@ -37,9 +38,18 @@ class MatcherService:
                 "cons": ["AI Service Unavailable"]
              }
 
+        # Format user preferences if they exist
+        prefs_text = ""
+        if user_preferences:
+            prefs_text = "\n\nUser Preferences (CRITICAL FOR SCORING):\n"
+            for k, v in user_preferences.items():
+                if v:
+                    prefs_text += f"- {k.replace('_', ' ').capitalize()}: {v}\n"
+                    
         prompt = JOB_MATCH_PROMPT.format(
             resume_text=resume_text,
-            job_description=job_description
+            job_description=job_description,
+            user_preferences_section=prefs_text
         )
 
         try:
