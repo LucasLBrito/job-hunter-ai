@@ -1,7 +1,7 @@
 @echo off
 REM Start Frontend Server Locally (Windows)
 
-cd frontend
+cd apps\frontend
 
 REM Check if node_modules exists
 if not exist node_modules (

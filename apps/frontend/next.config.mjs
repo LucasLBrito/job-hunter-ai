@@ -1,11 +1,16 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-    output: 'export',
+    // Ativa o output standalone (necessário para deploys eficientes no Docker)
+    output: "standalone",
     images: {
-        unoptimized: true,
+        remotePatterns: [
+            {
+                protocol: "https",
+                hostname: "**",
+            },
+        ],
     },
-    // Optional: basePath if not deploying to custom domain
-    // basePath: '/job-hunter-ai', 
+    serverExternalPackages: ["pdf-parse"],
 };
 
 export default nextConfig;

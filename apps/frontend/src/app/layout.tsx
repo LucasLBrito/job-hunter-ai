@@ -11,6 +11,7 @@ export const metadata: Metadata = {
 };
 
 import QueryProvider from "@/providers/query-provider";
+import { ThemeProvider } from "@/components/theme-provider";
 
 export default function RootLayout({
     children,
@@ -24,7 +25,14 @@ export default function RootLayout({
                 inter.variable
             )}>
                 <QueryProvider>
-                    {children}
+                    <ThemeProvider
+                        attribute="class"
+                        defaultTheme="system"
+                        enableSystem
+                        disableTransitionOnChange
+                    >
+                        {children}
+                    </ThemeProvider>
                 </QueryProvider>
             </body>
         </html>
