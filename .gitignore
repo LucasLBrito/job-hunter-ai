@@ -1,7 +1,9 @@
 .env
+.env.*
 .env.dev
 .env.prod
 .env.local
+.env.vps
 
 # Python
 __pycache__/
