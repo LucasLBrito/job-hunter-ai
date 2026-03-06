@@ -25,7 +25,7 @@ Este projeto segue uma arquitetura baseada em **Monorepo**, dividindo claramente
 | **Backend** | Python 3.11, FastAPI, SQLAlchemy (Async), Pydantic V2 |
 | **Database** | PostgreSQL (Produção), SQLite (Dev/Testes) |
 | **Inteligência Artificial** | Google Gemini 1.5 Flash/Pro, OpenAI GPT-4o, Azure AI |
-| **Infraestrutura** | Docker, Docker Compose, Railway (Deploy), Render |
+| **Infraestrutura** | Docker, Docker Compose, VPS Hostinger (Ubuntu 24.04), Nginx |
 
 ---
 
