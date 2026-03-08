@@ -120,13 +120,13 @@ services:
       context: ./apps/frontend
       dockerfile: Dockerfile
       args:
-        - NEXT_PUBLIC_API_URL=https://jobhunter.lucasdevbrito.tech
+        - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:8000}
     container_name: jobhunter-frontend
     restart: unless-stopped
     ports:
       - "3000:3000"
     environment:
-      - NEXT_PUBLIC_API_URL=https://jobhunter.lucasdevbrito.tech
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:8000}
       - NODE_ENV=production
     depends_on:
       - backend

@@ -9,7 +9,7 @@ from motor.motor_asyncio import AsyncIOMotorClient
 # Configuração para importar o app do projeto principal
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../")))
 
-from app.database import AsyncSessionLocal
+from app.db.session import async_session_maker
 from app.models.job import Job
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -40,7 +40,7 @@ async def process_batch():
 
     logger.info(f"Processing batch of {len(raw_jobs)} jobs.")
     
-    async with AsyncSessionLocal() as pg_db:
+    async with async_session_maker() as pg_db:
         processed_count = 0
         
         for raw_job in raw_jobs:
