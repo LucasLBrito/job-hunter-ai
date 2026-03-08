@@ -100,13 +100,13 @@ services:
       - ENVIRONMENT=production
     env_file:
       - ./apps/backend/.env
-    # Run spider every 6 hours with all default queries
+    # Run spider every 3 hours with all default queries
     command: >
       sh -c "while true; do
         echo '🕷️ Starting Job Spider...';
         python -m app.services.jobsearch.spider --limit 50 --concurrency 5;
-        echo '💤 Sleeping 6 hours...';
-        sleep 21600;
+        echo '💤 Sleeping 3 hours...';
+        sleep 10800;
       done"
     depends_on:
       - mongodb
