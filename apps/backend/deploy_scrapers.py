@@ -23,9 +23,20 @@ def deploy():
             print("Could not find project directory!")
             return
 
+        # Load local .env keys to inject into VPS
+        import os
+        from dotenv import load_dotenv
+        load_dotenv("apps/backend/.env")
+        tavily_key = os.getenv("TAVILY_API_KEY", "")
+        firecrawl_key = os.getenv("FIRECRAWL_API_KEY", "")
+        exa_key = os.getenv("EXA_API_KEY", "")
+
         commands = [
             f"git config --global --add safe.directory {dir_path}",
             f"cd {dir_path} && git fetch origin && git reset --hard origin/master",
+            f"grep -q 'TAVILY_API_KEY' {dir_path}/apps/backend/.env || echo 'TAVILY_API_KEY={tavily_key}' >> {dir_path}/apps/backend/.env",
+            f"grep -q 'FIRECRAWL_API_KEY' {dir_path}/apps/backend/.env || echo 'FIRECRAWL_API_KEY={firecrawl_key}' >> {dir_path}/apps/backend/.env",
+            f"grep -q 'EXA_API_KEY' {dir_path}/apps/backend/.env || echo 'EXA_API_KEY={exa_key}' >> {dir_path}/apps/backend/.env",
             f"docker rmi -f job-hunter-ai_spider-worker || true",
             f"cd {dir_path} && docker-compose -f docker-compose.vps.yml build --no-cache spider-worker",
             f"cd {dir_path} && docker-compose -f docker-compose.vps.yml up --force-recreate -d spider-worker",
