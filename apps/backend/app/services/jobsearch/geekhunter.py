@@ -1,7 +1,9 @@
-"""GeekHunter Scraper - Uses GeekHunter's internal JSON API."""
+"""GeekHunter Scraper - Uses GeekHunter's pages and API."""
 import logging
+import json
 from typing import List
 from datetime import datetime
+from bs4 import BeautifulSoup
 from app.services.jobsearch.base import BaseScraper
 from app.services.jobsearch.models import ScrapedJob
 
@@ -10,78 +12,86 @@ logger = logging.getLogger(__name__)
 
 class GeekHunterScraper(BaseScraper):
     PLATFORM_NAME = "geekhunter"
-    # GeekHunter exposes a JSON API used internally by their SPA frontend
-    API_URL = "https://www.geekhunter.com.br/api/positions"
 
     async def search_jobs(self, query: str, limit: int = 20) -> List[ScrapedJob]:
         logger.info(f"GeekHunterScraper: Searching for '{query}'")
         jobs = []
         try:
-            params = {"query": query, "page": 1, "per_page": min(limit, 50)}
-            headers = {
-                "Accept": "application/json",
-                "X-Requested-With": "XMLHttpRequest",
-            }
-            resp = await self.fetch(
-                self.API_URL, params=params, headers=headers,
-                referer="https://www.geekhunter.com.br/vagas"
-            )
-            data = resp.json()
-            items = data if isinstance(data, list) else data.get("data", data.get("positions", data.get("results", [])))
-            if isinstance(items, dict):
-                items = items.get("data", [])
-            
-            for item in (items or [])[:limit]:
-                try:
-                    title = item.get("title") or item.get("name") or "N/A"
-                    company = item.get("company_name") or item.get("company", {}).get("name", "Confidencial") if isinstance(item.get("company"), dict) else str(item.get("company", "Confidencial"))
-                    location = item.get("city") or item.get("location") or "Brasil"
-                    is_remote = item.get("remote", False) or "remoto" in str(location).lower()
-                    slug = item.get("slug") or item.get("id") or ""
-                    job_url = item.get("url") or f"https://www.geekhunter.com.br/vagas/{slug}"
-                    desc = item.get("description") or item.get("summary") or ""
-                    external_id = f"geekhunter_{item.get('id', hash(job_url))}"
-                    jobs.append(ScrapedJob(
-                        title=title, company=company, location=location, is_remote=is_remote,
-                        description=str(desc)[:3000], url=job_url, external_id=external_id,
-                        source_platform=self.PLATFORM_NAME, posted_at=datetime.utcnow(), technologies=[],
-                    ))
-                except Exception as e:
-                    logger.warning(f"GeekHunterScraper: parse error: {e}")
-        except Exception as e:
-            logger.error(f"GeekHunterScraper: failed: {e}")
-            # Fallback to HTML scraping
-            return await self._fallback_html(query, limit)
-        logger.info(f"GeekHunterScraper: found {len(jobs)} results for '{query}'")
-        return jobs
-
-    async def _fallback_html(self, query: str, limit: int) -> List[ScrapedJob]:
-        """Fallback to HTML scraping if JSON API fails."""
-        from bs4 import BeautifulSoup
-        jobs = []
-        try:
+            # Try the vagas page with search
             url = f"https://www.geekhunter.com.br/vagas?q={query.replace(' ', '+')}"
             resp = await self.fetch(url, referer="https://www.geekhunter.com.br/")
-            soup = BeautifulSoup(resp.text, "html.parser")
-            cards = soup.select("div[class*='job'], article, a[href*='/vagas/']")
-            for card in cards[:limit]:
+            text = resp.text
+
+            # Strategy 1: __NEXT_DATA__
+            if '__NEXT_DATA__' in text:
                 try:
-                    title_el = card.select_one("h2, h3, [class*='title']")
-                    title = title_el.get_text(strip=True) if title_el else card.get_text(strip=True)[:80]
-                    if not title or len(title) < 3:
-                        continue
-                    href = card.get("href") or ""
-                    if not href:
-                        link = card.select_one("a")
-                        href = link["href"] if link and link.get("href") else ""
-                    job_url = f"https://www.geekhunter.com.br{href}" if href.startswith("/") else href
-                    jobs.append(ScrapedJob(
-                        title=title, company="GeekHunter", location="Brasil", is_remote=False,
-                        description="", url=job_url, external_id=f"geekhunter_{hash(job_url)}",
-                        source_platform=self.PLATFORM_NAME, posted_at=datetime.utcnow(), technologies=[],
-                    ))
-                except Exception:
-                    pass
+                    soup_temp = BeautifulSoup(text, "html.parser")
+                    script = soup_temp.find("script", id="__NEXT_DATA__")
+                    if script:
+                        next_data = json.loads(script.string)
+                        page_props = next_data.get("props", {}).get("pageProps", {})
+                        for key, value in page_props.items():
+                            if isinstance(value, list) and value and isinstance(value[0], dict):
+                                first = value[0]
+                                if any(k in first for k in ["title", "name", "position"]):
+                                    for item in value[:limit]:
+                                        title = item.get("title") or item.get("name") or ""
+                                        if not title:
+                                            continue
+                                        company = item.get("company_name") or item.get("company", "Confidencial")
+                                        if isinstance(company, dict):
+                                            company = company.get("name", "Confidencial")
+                                        slug = item.get("slug") or item.get("id") or ""
+                                        job_url = item.get("url") or f"https://www.geekhunter.com.br/vagas/{slug}"
+                                        jobs.append(ScrapedJob(
+                                            title=title, company=str(company),
+                                            location=item.get("city", "Brasil"),
+                                            is_remote=item.get("remote", False),
+                                            description=str(item.get("description", ""))[:3000],
+                                            url=job_url,
+                                            external_id=f"geekhunter_{item.get('id', hash(job_url))}",
+                                            source_platform=self.PLATFORM_NAME,
+                                            posted_at=datetime.utcnow(), technologies=[],
+                                        ))
+                                    break
+                except Exception as e:
+                    logger.warning(f"GeekHunterScraper: __NEXT_DATA__ error: {e}")
+
+            # Strategy 2: HTML parsing
+            if not jobs:
+                soup = BeautifulSoup(text, "html.parser")
+                cards = (
+                    soup.select("a[href*='/vagas/']") or
+                    soup.select("div[class*='job'], article, div[class*='position']")
+                )
+                seen = set()
+                for card in cards[:limit * 2]:
+                    try:
+                        if card.name == "a":
+                            title = card.get_text(strip=True)[:100]
+                            href = card.get("href", "")
+                        else:
+                            title_el = card.select_one("h2, h3, a")
+                            title = title_el.get_text(strip=True) if title_el else ""
+                            link = card.select_one("a[href]")
+                            href = link["href"] if link else ""
+                        if not title or len(title) < 5 or title in seen:
+                            continue
+                        seen.add(title)
+                        job_url = f"https://www.geekhunter.com.br{href}" if href.startswith("/") else href
+                        jobs.append(ScrapedJob(
+                            title=title, company="GeekHunter", location="Brasil",
+                            is_remote=False, description="", url=job_url,
+                            external_id=f"geekhunter_{hash(job_url)}",
+                            source_platform=self.PLATFORM_NAME,
+                            posted_at=datetime.utcnow(), technologies=[],
+                        ))
+                        if len(jobs) >= limit:
+                            break
+                    except Exception:
+                        pass
+
         except Exception as e:
-            logger.error(f"GeekHunterScraper fallback failed: {e}")
+            logger.error(f"GeekHunterScraper: failed: {e}")
+        logger.info(f"GeekHunterScraper: found {len(jobs)} results for '{query}'")
         return jobs

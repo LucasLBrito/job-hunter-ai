@@ -1,5 +1,6 @@
-"""Catho Scraper - HTML scraping from catho.com.br."""
+"""Catho Scraper - Uses Catho's internal search API (JSON)."""
 import logging
+import json
 from typing import List, Optional
 from datetime import datetime
 from bs4 import BeautifulSoup
@@ -11,85 +12,124 @@ logger = logging.getLogger(__name__)
 
 class CathoScraper(BaseScraper):
     PLATFORM_NAME = "catho"
-    BASE_URL = "https://www.catho.com.br/vagas"
+    # Catho's SPA uses an internal GraphQL/REST API
+    SEARCH_URL = "https://www.catho.com.br/vagas"
 
     async def search_jobs(self, query: str, limit: int = 20) -> List[ScrapedJob]:
-        url = f"{self.BASE_URL}/?q={query}"
         logger.info(f"CathoScraper: Searching for '{query}'")
         jobs = []
+
         try:
+            # Try Catho's internal API first (their SPA uses this)
+            api_url = "https://api-vagas.catho.com.br/v2/vagas"
+            params = {"q": query, "page": 1, "order": "relevancia", "tamanhoPagina": min(limit, 50)}
+            headers = {
+                "Accept": "application/json",
+                "Origin": "https://www.catho.com.br",
+            }
+            try:
+                resp = await self.fetch(api_url, params=params, headers=headers, referer="https://www.catho.com.br/vagas/")
+                data = resp.json()
+                items = data.get("vagas", data.get("data", data.get("results", [])))
+                if isinstance(items, dict):
+                    items = items.get("vagas", items.get("data", []))
+                for item in (items or [])[:limit]:
+                    try:
+                        title = item.get("cargo", item.get("titulo", item.get("title", "N/A")))
+                        company = item.get("empresa", item.get("company", "Confidencial"))
+                        if isinstance(company, dict):
+                            company = company.get("nome", company.get("name", "Confidencial"))
+                        location = item.get("cidade", item.get("localizacao", "Brasil"))
+                        if isinstance(location, dict):
+                            location = location.get("nome", "Brasil")
+                        is_remote = item.get("homeOffice", False) or "remoto" in str(location).lower()
+                        desc = item.get("descricao", item.get("description", ""))
+                        slug = item.get("id", item.get("idVaga", ""))
+                        job_url = item.get("url", f"https://www.catho.com.br/vagas/{slug}")
+                        external_id = f"catho_{slug or hash(job_url)}"
+                        salary_min = item.get("salarioMinimo", item.get("faixaSalarial", {}).get("minimo"))
+                        salary_max = item.get("salarioMaximo", item.get("faixaSalarial", {}).get("maximo"))
+                        try:
+                            salary_min = int(float(salary_min)) if salary_min else None
+                            salary_max = int(float(salary_max)) if salary_max else None
+                        except (ValueError, TypeError):
+                            salary_min = salary_max = None
+                        jobs.append(ScrapedJob(
+                            title=title, company=str(company), location=str(location),
+                            is_remote=is_remote, salary_min=salary_min, salary_max=salary_max,
+                            salary_currency="BRL", description=str(desc)[:3000],
+                            url=job_url, external_id=external_id,
+                            source_platform=self.PLATFORM_NAME, posted_at=datetime.utcnow(),
+                            technologies=[],
+                        ))
+                    except Exception as e:
+                        logger.warning(f"CathoScraper: parse error: {e}")
+                if jobs:
+                    logger.info(f"CathoScraper (API): found {len(jobs)} results")
+                    return jobs
+            except Exception as e:
+                logger.info(f"CathoScraper: API failed ({e}), trying HTML")
+
+            # Fallback to HTML scraping
+            url = f"{self.SEARCH_URL}/?q={query}"
             resp = await self.fetch(url, referer="https://www.catho.com.br/")
             soup = BeautifulSoup(resp.text, "html.parser")
 
-            job_lists = soup.find("ul", class_=lambda x: x and "gtm-job-list" in x) or soup.find("ul", {"id": "search-result"})
-            if not job_lists:
-                job_cards = soup.find_all("article")
-            else:
-                job_cards = job_lists.find_all("li")
+            # Try __NEXT_DATA__ first (if Catho uses Next.js)
+            script = soup.find("script", id="__NEXT_DATA__")
+            if script:
+                try:
+                    next_data = json.loads(script.string)
+                    page_props = next_data.get("props", {}).get("pageProps", {})
+                    items = page_props.get("jobs", page_props.get("vagas", []))
+                    for item in (items or [])[:limit]:
+                        title = item.get("cargo", item.get("title", "N/A"))
+                        company = item.get("empresa", "Confidencial")
+                        if isinstance(company, dict):
+                            company = company.get("nome", "Confidencial")
+                        job_url = item.get("url", "")
+                        external_id = f"catho_{item.get('id', hash(job_url))}"
+                        jobs.append(ScrapedJob(
+                            title=title, company=str(company), location="Brasil",
+                            is_remote=False, description="",
+                            url=job_url, external_id=external_id,
+                            source_platform=self.PLATFORM_NAME, posted_at=datetime.utcnow(),
+                            technologies=[],
+                        ))
+                    if jobs:
+                        logger.info(f"CathoScraper (__NEXT_DATA__): found {len(jobs)} results")
+                        return jobs
+                except Exception:
+                    pass
 
-            logger.info(f"CathoScraper: found {len(job_cards)} candidate cards")
+            # Broad HTML parsing
+            job_cards = soup.select("article, li[class*='job'], div[class*='job-card'], div[class*='vaga']")
             for card in job_cards[:limit]:
                 try:
-                    job = self._parse_job_card(card)
-                    if job:
-                        jobs.append(job)
-                except Exception as e:
-                    logger.warning(f"CathoScraper: parse error: {e}")
+                    title_el = card.select_one("h2, h3, a[class*='title']")
+                    if not title_el:
+                        continue
+                    title = title_el.get_text(strip=True)
+                    if not title or len(title) < 3:
+                        continue
+                    link = card.select_one("a[href]")
+                    href = link["href"] if link else ""
+                    job_url = href if href.startswith("http") else f"https://www.catho.com.br{href}"
+                    company_el = card.select_one("[class*='company'], [class*='empresa']")
+                    company = company_el.get_text(strip=True) if company_el else "Confidencial"
+                    external_id = f"catho_{hash(job_url)}"
+                    jobs.append(ScrapedJob(
+                        title=title, company=company, location="Brasil",
+                        is_remote="remoto" in card.get_text().lower(),
+                        description=card.get_text(strip=True)[:300],
+                        url=job_url, external_id=external_id,
+                        source_platform=self.PLATFORM_NAME, posted_at=datetime.utcnow(),
+                        technologies=[],
+                    ))
+                except Exception:
+                    pass
+
         except Exception as e:
             logger.error(f"CathoScraper: failed: {e}")
         logger.info(f"CathoScraper: returning {len(jobs)} jobs")
         return jobs
-
-    def _parse_job_card(self, card) -> Optional[ScrapedJob]:
-        title_elem = card.find("h2")
-        if not title_elem:
-            return None
-        link_elem = title_elem.find("a")
-        if not link_elem:
-            return None
-        title = title_elem.get_text(strip=True)
-        job_url = link_elem.get("href", "")
-        external_id = f"{self.PLATFORM_NAME}_{hash(job_url)}"
-
-        company = "Nao revelado (Catho)"
-        company_candidate = card.find("span", attrs={"data-gtm-element": "job-company-name"})
-        if company_candidate:
-            company = company_candidate.get_text(strip=True)
-
-        salary_min = salary_max = None
-        salary_elem = card.find(string=lambda s: s and "R$" in s)
-        if salary_elem:
-            sal_text = str(salary_elem).replace(".", "").replace(",", ".").replace("R$", "")
-            parts = [p.strip() for p in sal_text.split("a") if p.strip().replace(".", "", 1).isdigit()]
-            try:
-                if parts:
-                    salary_min = int(float(parts[0]))
-                    salary_max = int(float(parts[-1])) if len(parts) > 1 else salary_min
-            except Exception:
-                pass
-
-        location = "Brasil"
-        is_remote = False
-        loc_elem = card.find("a", href=lambda h: h and "/vagas/" in h)
-        if loc_elem:
-            location = loc_elem.get_text(strip=True)
-        if "Home Office" in card.get_text() or "Remoto" in card.get_text():
-            is_remote = True
-
-        desc_preview = ""
-        desc_elem = card.find("span", class_=lambda x: x and "job-description" in x)
-        if not desc_elem:
-            desc_elem = card.find("div", class_=lambda x: x and "job-description" in x)
-        if desc_elem:
-            desc_preview = desc_elem.get_text(strip=True)
-        else:
-            desc_preview = card.get_text(separator=" ", strip=True)[:300] + "..."
-
-        return ScrapedJob(
-            title=title, company=company, location=location, is_remote=is_remote,
-            salary_min=salary_min, salary_max=salary_max, salary_currency="BRL",
-            description=desc_preview,
-            url=job_url if job_url.startswith("http") else f"https://www.catho.com.br{job_url}",
-            external_id=external_id, source_platform=self.PLATFORM_NAME,
-            posted_at=datetime.utcnow(), technologies=[],
-        )
