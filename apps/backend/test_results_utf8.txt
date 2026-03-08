@@ -1,0 +1,14 @@
+﻿Checking for required API Keys in .env...
+TAVILY_API_KEY: [SET]
+FIRECRAWL_API_KEY: [SET]
+EXA_API_KEY: [SET]
+
+--- Testing TavilyScraper ---
+SUCCESS: Found 0 jobs
+
+--- Testing FirecrawlJobScraper ---
+SUCCESS: Found 1 jobs
+ERROR: testing FirecrawlJobScraper: 'charmap' codec can't encode characters in position 58-60: character maps to <undefined>
+
+--- Testing ExaScraper ---
+SUCCESS: Found 0 jobs

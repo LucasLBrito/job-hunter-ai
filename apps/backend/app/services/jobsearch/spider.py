@@ -60,6 +60,10 @@ def _build_scraper_registry() -> list:
         ("app.services.jobsearch.cathoscraper", "CathoScraper"),
         ("app.services.jobsearch.vagas", "VagasScraper"),
         ("app.services.jobsearch.jobspy_scraper", "JobSpyScraper"),
+        # AI API Scrapers
+        ("app.services.jobsearch.tavily_scraper", "TavilyScraper"),
+        ("app.services.jobsearch.firecrawl_job_scraper", "FirecrawlJobScraper"),
+        ("app.services.jobsearch.exa_scraper", "ExaScraper"),
         ("app.services.jobsearch.gupy", "GupyScraper"),
         ("app.services.jobsearch.remoteok", "RemoteOKScraper"),
         ("app.services.jobsearch.adzuna", "AdzunaScraper"),

@@ -1,0 +1,48 @@
+﻿Checking for required API Keys in .env...
+TAVILY_API_KEY: [SET]
+FIRECRAWL_API_KEY: [SET]
+EXA_API_KEY: [SET]
+
+--- Testing TavilyScraper ---
+SUCCESS: Found 2 jobs
+  - Remote Python Jobs - We Work Remotely at Tavily Extracted (tavily)
+    URL: https://weworkremotely.com/remote-jobs-python
+    Desc preview: we work remotely
+we work remotely
+
+39,064  jobs po...
+  - Remote Python Jobs - We Work Remotely at Tavily Extracted (tavily)
+    URL: https://weworkremotely.com/remote-python-jobs
+    Desc preview: we work remotely
+we work remotely
+
+# Remote Python...
+
+--- Testing FirecrawlJobScraper ---
+SUCCESS: Found 1 jobs
+  - Get new remote┬ájobs sent to
+
+
+Subscribe
+
+├ù
+
+
+[­ƒæ®ÔÇì­ƒÆ╗┬áJoin Remote OK](https://remoteok.com/sign-up) [­ƒæï ┬á at Firecrawl Scraped (firecrawl)
+    URL: https://remoteok.com/?q=python
+    Desc preview: Extracted snippet: Get new remote┬ájobs sent to
+
+
+S...
+
+--- Testing ExaScraper ---
+SUCCESS: Found 2 jobs
+  - Python Job Board at Exa Semantic Search (exa)
+    URL: https://www.python.org/jobs/
+    Desc preview: Python Job Board | Python.org
+**Notice:** This pag...
+  - PyJobs: Jobs for Python developers at Exa Semantic Search (exa)
+    URL: https://www.pyjobs.com/
+    Desc preview: Jobs for Python developers - PyJobs
+## Menu
+Close ...

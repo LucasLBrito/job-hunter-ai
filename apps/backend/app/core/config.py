@@ -62,6 +62,11 @@ class Settings(BaseSettings):
     SCRAPER_PROXY_URL: Optional[str] = None
     ENABLE_JOBSPY: bool = True
     
+    # AI Search AI Scrapers (Tavily, Firecrawl, Exa)
+    TAVILY_API_KEY: Optional[str] = None
+    FIRECRAWL_API_KEY: Optional[str] = None
+    EXA_API_KEY: Optional[str] = None
+    
     # Adzuna Job Search API (free at developer.adzuna.com)
     ADZUNA_APP_ID: Optional[str] = None
     ADZUNA_APP_KEY: Optional[str] = None
