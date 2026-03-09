@@ -1,0 +1,16 @@
+﻿Connecting to 187.77.50.247 via SSH...
+> docker stop 634482e5a080_jobhunter-mongo 3c4428af7b4b_jobhunter-redis || true
+634482e5a080_jobhunter-mongo
+3c4428af7b4b_jobhunter-redis
+> docker rename 634482e5a080_jobhunter-mongo jobhunter-mongo || true
+> docker rename 3c4428af7b4b_jobhunter-redis jobhunter-redis || true
+> docker start jobhunter-mongo jobhunter-redis
+jobhunter-mongo
+jobhunter-redis
+> docker restart jobhunter-spider
+jobhunter-spider
+> sleep 5
+> docker exec jobhunter-spider getent hosts jobhunter-mongo
+172.18.0.3      jobhunter-mongo
+> docker exec jobhunter-spider getent hosts jobhunter-redis
+172.18.0.5      jobhunter-redis

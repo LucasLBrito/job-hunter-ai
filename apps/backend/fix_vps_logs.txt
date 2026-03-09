@@ -1,22 +1,39 @@
 ﻿Connecting to 187.77.50.247 via SSH...
-> docker start 634482e5a080
-634482e5a080
-> docker start 3c4428af7b4b
-3c4428af7b4b
-> docker restart jobhunter-spider
-jobhunter-spider
-> sleep 10
-> docker ps
-CONTAINER ID   IMAGE                           COMMAND                  CREATED         STATUS          PORTS                                         NAMES
-76a9881cea35   job-hunter-ai_spider-worker     "sh -c 'while true; ÔÇª"   7 minutes ago   Up 10 seconds   8000/tcp                                      jobhunter-spider
-6d8b95b39f21   job-hunter-ai_frontend:latest   "docker-entrypoint.sÔÇª"   2 days ago      Up 2 days       0.0.0.0:3000->3000/tcp, [::]:3000->3000/tcp   jobhunter-frontend
-17188f7890a9   job-hunter-ai_backend           "sh -c 'alembic upgrÔÇª"   2 days ago      Up 2 days       0.0.0.0:8000->8000/tcp, [::]:8000->8000/tcp   jobhunter-backend
-f7664eab3089   job-hunter-ai_etl-worker        "python /app/etl/worÔÇª"   2 days ago      Up 2 days       8000/tcp                                      jobhunter-etl-worker
-3c4428af7b4b   redis:7-alpine                  "docker-entrypoint.sÔÇª"   2 days ago      Up 20 seconds   6379/tcp                                      3c4428af7b4b_jobhunter-redis
-c5d007e10264   postgres:15-alpine              "docker-entrypoint.sÔÇª"   2 days ago      Up 2 days       5432/tcp                                      jobhunter-postgres
-634482e5a080   mongo:6                         "docker-entrypoint.sÔÇª"   2 days ago      Up 20 seconds   27017/tcp                                     634482e5a080_jobhunter-mongo
-> docker logs --tail=50 jobhunter-spider
-ERROR: 2026-03-09 00:36:19 Ôöé INFO    Ôöé httpx Ôöé HTTP Request: GET https://portal.api.gupy.io/api/v1/jobs?jobName=python+developer&limit=40&offset=0 "HTTP/1.1 200 OK"
+> docker exec jobhunter-spider getent hosts jobhunter-mongo
+> docker exec jobhunter-spider getent hosts 634482e5a080_jobhunter-mongo
+172.18.0.3      634482e5a080_jobhunter-mongo
+> docker logs --tail=150 jobhunter-spider | grep -iE 'mongodb|error'
+ERROR: 2026-03-09 00:36:17 Ôöé INFO    Ôöé __main__ Ôöé ­ƒöì JobSpyScraper: starting search for 'python developer' (limit=50)
+2026-03-09 00:36:17 Ôöé INFO    Ôöé __main__ Ôöé ­ƒöì TavilyScraper: starting search for 'python developer' (limit=50)
+2026-03-09 00:36:17 Ôöé INFO    Ôöé __main__ Ôöé ­ƒöì FirecrawlJobScraper: starting search for 'python developer' (limit=50)
+2026-03-09 00:36:17 Ôöé INFO    Ôöé app.services.jobsearch.cathoscraper Ôöé CathoScraper: Searching for 'python developer'
+2026-03-09 00:36:17 Ôöé INFO    Ôöé app.services.jobsearch.vagas Ôöé VagasScraper: Searching 'python developer' at https://www.vagas.com.br/vagas-de-python-developer
+2026-03-09 00:36:17 Ôöé INFO    Ôöé app.services.jobsearch.jobspy_scraper Ôöé JobSpyScraper: Searching for 'python developer' across ['indeed', 'linkedin', 'glassdoor', 'google', 'zip_recruiter']
+2026-03-09 00:36:17 Ôöé INFO    Ôöé app.services.jobsearch.tavily_scraper Ôöé TavilyScraper: Searching for 'python developer remote jobs recent openings site:lever.co OR site:greenhouse.io OR site:workable.com OR site:remotive.com OR site:weworkremotely.com'
+2026-03-09 00:36:17 Ôöé INFO    Ôöé app.services.jobsearch.firecrawl_job_scraper Ôöé FirecrawlJobScraper: Scraping 'https://remoteok.com/?q=python'
+2026-03-09 00:36:17 Ôöé WARNING Ôöé app.services.jobsearch.base Ôöé CathoScraper: attempt 1/3 failed for https://api-vagas.catho.com.br/v2/vagas: [Errno -2] Name or service not known. Retrying in 2.4s...
+2026-03-09 00:36:17 Ôöé INFO    Ôöé httpx Ôöé HTTP Request: GET https://www.vagas.com.br/vagas-de-python-developer "HTTP/1.1 403 Forbidden"
+2026-03-09 00:36:17 Ôöé WARNING Ôöé app.services.jobsearch.base Ôöé VagasScraper: attempt 1/3 failed for https://www.vagas.com.br/vagas-de-python-developer: Client error '403 Forbidden' for url 'https://www.vagas.com.br/vagas-de-python-developer'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403. Retrying in 2.6s...
+2026-03-09 00:36:17 Ôöé INFO    Ôöé app.services.jobsearch.jobspy_scraper Ôöé JobSpyScraper: Scraping indeed...
+2026-03-09 00:36:18 Ôöé INFO    Ôöé app.services.jobsearch.jobspy_scraper Ôöé JobSpyScraper: Got 15 results from indeed
+2026-03-09 00:36:18 Ôöé INFO    Ôöé app.services.jobsearch.jobspy_scraper Ôöé JobSpyScraper: Scraping linkedin...
+2026-03-09 00:36:18 Ôöé WARNING Ôöé app.services.jobsearch.jobspy_scraper Ôöé JobSpyScraper: Platform linkedin failed: 'NoneType' object has no attribute 'strip'
+2026-03-09 00:36:18 Ôöé INFO    Ôöé app.services.jobsearch.jobspy_scraper Ôöé JobSpyScraper: Scraping glassdoor...
+2026-03-09 00:36:18 Ôöé WARNING Ôöé app.services.jobsearch.jobspy_scraper Ôöé JobSpyScraper: Platform glassdoor failed: 'NoneType' object has no attribute 'strip'
+2026-03-09 00:36:18 Ôöé INFO    Ôöé app.services.jobsearch.jobspy_scraper Ôöé JobSpyScraper: Scraping google...
+2026-03-09 00:36:18 Ôöé WARNING Ôöé app.services.jobsearch.jobspy_scraper Ôöé JobSpyScraper: Platform google failed: 'NoneType' object has no attribute 'strip'
+2026-03-09 00:36:18 Ôöé INFO    Ôöé app.services.jobsearch.jobspy_scraper Ôöé JobSpyScraper: Scraping zip_recruiter...
+2026-03-09 00:36:18 Ôöé WARNING Ôöé app.services.jobsearch.jobspy_scraper Ôöé JobSpyScraper: Platform zip_recruiter failed: 'NoneType' object has no attribute 'strip'
+2026-03-09 00:36:18 Ôöé INFO    Ôöé app.services.jobsearch.jobspy_scraper Ôöé JobSpyScraper: Found 14 jobs
+2026-03-09 00:36:18 Ôöé INFO    Ôöé __main__ Ôöé Ô£à JobSpyScraper: found 14 jobs for 'python developer'
+2026-03-09 00:36:18 Ôöé INFO    Ôöé __main__ Ôöé ­ƒöì ExaScraper: starting search for 'python developer' (limit=50)
+2026-03-09 00:36:18 Ôöé INFO    Ôöé app.services.jobsearch.exa_scraper Ôöé ExaScraper: Executing semantic search for 'career pages or job boards listing remote python developer roles'
+2026-03-09 00:36:18 Ôöé INFO    Ôöé httpx Ôöé HTTP Request: POST https://api.firecrawl.dev/v0/scrape "HTTP/1.1 200 OK"
+2026-03-09 00:36:18 Ôöé INFO    Ôöé app.services.jobsearch.firecrawl_job_scraper Ôöé FirecrawlJobScraper: Extracted 1 jobs from https://remoteok.com/?q=python
+2026-03-09 00:36:18 Ôöé INFO    Ôöé __main__ Ôöé Ô£à FirecrawlJobScraper: found 1 jobs for 'python developer'
+2026-03-09 00:36:18 Ôöé INFO    Ôöé __main__ Ôöé ­ƒöì GupyScraper: starting search for 'python developer' (limit=50)
+2026-03-09 00:36:19 Ôöé INFO    Ôöé httpx Ôöé HTTP Request: GET https://portal.api.gupy.io/api/v1/jobs?jobName=python+developer&limit=40&offset=0 "HTTP/1.1 200 OK"
 2026-03-09 00:36:19 Ôöé INFO    Ôöé app.services.jobsearch.gupy Ôöé GupyScraper: found 0 results for 'python developer'
 2026-03-09 00:36:19 Ôöé INFO    Ôöé __main__ Ôöé Ô£à GupyScraper: found 0 jobs for 'python developer'
 2026-03-09 00:36:19 Ôöé INFO    Ôöé __main__ Ôöé ­ƒöì RemoteOKScraper: starting search for 'python developer' (limit=50)
@@ -66,3 +83,73 @@ For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/St
 2026-03-09 00:36:26 Ôöé INFO    Ôöé httpx Ôöé HTTP Request: GET https://www.99freelas.com.br/projects?q=python+developer "HTTP/1.1 403 Forbidden"
 2026-03-09 00:36:26 Ôöé WARNING Ôöé app.services.jobsearch.base Ôöé FreelaScraper: attempt 2/3 failed for https://www.99freelas.com.br/projects: Client error '403 Forbidden' for url 'https://www.99freelas.com.br/projects?q=python+developer'
 For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403. Retrying in 4.6s...
+2026-03-09 00:36:28 Ôöé INFO    Ôöé httpx Ôöé HTTP Request: GET https://remotar.com.br/vagas "HTTP/1.1 404 Not Found"
+2026-03-09 00:36:28 Ôöé WARNING Ôöé app.services.jobsearch.base Ôöé RemotarScraper: attempt 3/3 failed for https://remotar.com.br/vagas: Client error '404 Not Found' for url 'https://remotar.com.br/vagas'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/404. Retrying in 8.4s...
+2026-03-09 00:36:30 Ôöé INFO    Ôöé httpx Ôöé HTTP Request: GET https://www.99freelas.com.br/projects?q=python+developer "HTTP/1.1 403 Forbidden"
+2026-03-09 00:36:30 Ôöé WARNING Ôöé app.services.jobsearch.base Ôöé FreelaScraper: attempt 3/3 failed for https://www.99freelas.com.br/projects: Client error '403 Forbidden' for url 'https://www.99freelas.com.br/projects?q=python+developer'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403. Retrying in 8.6s...
+2026-03-09 00:36:32 Ôöé INFO    Ôöé app.services.jobsearch.cathoscraper Ôöé CathoScraper: API failed ([Errno -2] Name or service not known), trying HTML
+2026-03-09 00:36:32 Ôöé INFO    Ôöé httpx Ôöé HTTP Request: GET https://www.catho.com.br/vagas/?q=python%20developer "HTTP/1.1 404 Not Found"
+2026-03-09 00:36:32 Ôöé WARNING Ôöé app.services.jobsearch.base Ôöé CathoScraper: attempt 1/3 failed for https://www.catho.com.br/vagas/?q=python developer: Client error '404 Not Found' for url 'https://www.catho.com.br/vagas/?q=python%20developer'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/404. Retrying in 2.8s...
+2026-03-09 00:36:33 Ôöé ERROR   Ôöé app.services.jobsearch.vagas Ôöé VagasScraper: failed: Client error '403 Forbidden' for url 'https://www.vagas.com.br/vagas-de-python-developer'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403
+2026-03-09 00:36:33 Ôöé INFO    Ôöé app.services.jobsearch.vagas Ôöé VagasScraper: found 0 results for 'python developer'
+2026-03-09 00:36:33 Ôöé INFO    Ôöé __main__ Ôöé Ô£à VagasScraper: found 0 jobs for 'python developer'
+2026-03-09 00:36:33 Ôöé INFO    Ôöé __main__ Ôöé ­ƒöì WeWorkRemotelyScraper: starting search for 'python developer' (limit=50)
+2026-03-09 00:36:33 Ôöé INFO    Ôöé app.services.jobsearch.weworkremotely Ôöé WeWorkRemotelyScraper: Searching for 'python developer' via RSS
+2026-03-09 00:36:33 Ôöé INFO    Ôöé httpx Ôöé HTTP Request: GET https://weworkremotely.com/categories/remote-programming-jobs.rss "HTTP/1.1 200 OK"
+2026-03-09 00:36:34 Ôöé INFO    Ôöé httpx Ôöé HTTP Request: GET https://weworkremotely.com/categories/remote-devops-sysadmin-jobs.rss "HTTP/1.1 200 OK"
+2026-03-09 00:36:35 Ôöé INFO    Ôöé httpx Ôöé HTTP Request: GET https://weworkremotely.com/categories/remote-design-jobs.rss "HTTP/1.1 200 OK"
+2026-03-09 00:36:35 Ôöé INFO    Ôöé app.services.jobsearch.weworkremotely Ôöé WeWorkRemotelyScraper: found 50 results for 'python developer'
+2026-03-09 00:36:35 Ôöé INFO    Ôöé __main__ Ôöé Ô£à WeWorkRemotelyScraper: found 50 jobs for 'python developer'
+2026-03-09 00:36:35 Ôöé INFO    Ôöé __main__ Ôöé ­ƒöì WorkanaScraper: starting search for 'python developer' (limit=50)
+2026-03-09 00:36:35 Ôöé INFO    Ôöé app.services.jobsearch.workana Ôöé WorkanaScraper: Searching for 'python developer'
+2026-03-09 00:36:35 Ôöé INFO    Ôöé httpx Ôöé HTTP Request: GET https://www.catho.com.br/vagas/?q=python%20developer "HTTP/1.1 404 Not Found"
+2026-03-09 00:36:35 Ôöé WARNING Ôöé app.services.jobsearch.base Ôöé CathoScraper: attempt 2/3 failed for https://www.catho.com.br/vagas/?q=python developer: Client error '404 Not Found' for url 'https://www.catho.com.br/vagas/?q=python%20developer'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/404. Retrying in 4.1s...
+2026-03-09 00:36:35 Ôöé INFO    Ôöé httpx Ôöé HTTP Request: GET https://www.workana.com/jobs?query=python+developer&language=pt "HTTP/1.1 200 OK"
+2026-03-09 00:36:35 Ôöé INFO    Ôöé app.services.jobsearch.workana Ôöé WorkanaScraper: found 0 results for 'python developer'
+2026-03-09 00:36:35 Ôöé INFO    Ôöé __main__ Ôöé Ô£à WorkanaScraper: found 0 jobs for 'python developer'
+2026-03-09 00:36:35 Ôöé INFO    Ôöé __main__ Ôöé ­ƒöì APInfoScraper: starting search for 'python developer' (limit=50)
+2026-03-09 00:36:36 Ôöé INFO    Ôöé httpx Ôöé HTTP Request: GET https://www.apinfo.com/apinfo/asp/formvagas.cfm?texto=python+developer&acao=listar "HTTP/1.1 302 Found"
+2026-03-09 00:36:36 Ôöé INFO    Ôöé httpx Ôöé HTTP Request: GET http://www.apinfo.com/pagerro.htm "HTTP/1.1 200 OK"
+2026-03-09 00:36:36 Ôöé INFO    Ôöé app.services.jobsearch.apinfo Ôöé APInfoScraper: found 0 results for 'python developer'
+2026-03-09 00:36:36 Ôöé INFO    Ôöé __main__ Ôöé Ô£à APInfoScraper: found 0 jobs for 'python developer'
+2026-03-09 00:36:36 Ôöé INFO    Ôöé __main__ Ôöé ­ƒöì ProgramaThorScraper: starting search for 'python developer' (limit=50)
+2026-03-09 00:36:36 Ôöé INFO    Ôöé app.services.jobsearch.programathor Ôöé ProgramaThorScraper: Searching at https://programathor.com.br/jobs?search=python
+2026-03-09 00:36:37 Ôöé WARNING Ôöé app.services.jobsearch.remotar Ôöé RemotarScraper: URL https://remotar.com.br/vagas failed: Client error '404 Not Found' for url 'https://remotar.com.br/vagas'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/404
+2026-03-09 00:36:37 Ôöé INFO    Ôöé httpx Ôöé HTTP Request: GET https://programathor.com.br/jobs?search=python "HTTP/1.1 200 OK"
+2026-03-09 00:36:37 Ôöé INFO    Ôöé app.services.jobsearch.programathor Ôöé ProgramaThorScraper: found 0 results for 'python developer'
+2026-03-09 00:36:37 Ôöé INFO    Ôöé __main__ Ôöé Ô£à ProgramaThorScraper: found 0 jobs for 'python developer'
+2026-03-09 00:36:38 Ôöé INFO    Ôöé httpx Ôöé HTTP Request: GET https://remotar.com.br/search?query=python+developer "HTTP/1.1 404 Not Found"
+2026-03-09 00:36:38 Ôöé WARNING Ôöé app.services.jobsearch.base Ôöé RemotarScraper: attempt 1/3 failed for https://remotar.com.br/search?query=python+developer: Client error '404 Not Found' for url 'https://remotar.com.br/search?query=python+developer'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/404. Retrying in 2.6s...
+2026-03-09 00:36:39 Ôöé ERROR   Ôöé app.services.jobsearch.freela Ôöé FreelaScraper: failed: Client error '403 Forbidden' for url 'https://www.99freelas.com.br/projects?q=python+developer'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403
+2026-03-09 00:36:39 Ôöé INFO    Ôöé app.services.jobsearch.freela Ôöé FreelaScraper: found 0 results for 'python developer'
+2026-03-09 00:36:39 Ôöé INFO    Ôöé __main__ Ôöé Ô£à FreelaScraper: found 0 jobs for 'python developer'
+2026-03-09 00:36:39 Ôöé INFO    Ôöé httpx Ôöé HTTP Request: GET https://www.catho.com.br/vagas/?q=python%20developer "HTTP/1.1 404 Not Found"
+2026-03-09 00:36:39 Ôöé WARNING Ôöé app.services.jobsearch.base Ôöé CathoScraper: attempt 3/3 failed for https://www.catho.com.br/vagas/?q=python developer: Client error '404 Not Found' for url 'https://www.catho.com.br/vagas/?q=python%20developer'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/404. Retrying in 8.6s...
+2026-03-09 00:36:41 Ôöé INFO    Ôöé httpx Ôöé HTTP Request: GET https://remotar.com.br/search?query=python+developer "HTTP/1.1 404 Not Found"
+2026-03-09 00:36:41 Ôöé WARNING Ôöé app.services.jobsearch.base Ôöé RemotarScraper: attempt 2/3 failed for https://remotar.com.br/search?query=python+developer: Client error '404 Not Found' for url 'https://remotar.com.br/search?query=python+developer'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/404. Retrying in 4.1s...
+2026-03-09 00:36:42 Ôöé WARNING Ôöé app.services.jobsearch.base Ôöé GeekHunterScraper: attempt 1/3 failed for https://www.geekhunter.com.br/vagas?q=python+developer: . Retrying in 2.3s...
+2026-03-09 00:36:46 Ôöé INFO    Ôöé httpx Ôöé HTTP Request: GET https://remotar.com.br/search?query=python+developer "HTTP/1.1 404 Not Found"
+2026-03-09 00:36:46 Ôöé WARNING Ôöé app.services.jobsearch.base Ôöé RemotarScraper: attempt 3/3 failed for https://remotar.com.br/search?query=python+developer: Client error '404 Not Found' for url 'https://remotar.com.br/search?query=python+developer'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/404. Retrying in 8.3s...
+2026-03-09 00:36:47 Ôöé INFO    Ôöé httpx Ôöé HTTP Request: GET https://www.geekhunter.com.br/vagas?q=python+developer "HTTP/1.1 200 OK"
+2026-03-09 00:36:48 Ôöé ERROR   Ôöé app.services.jobsearch.cathoscraper Ôöé CathoScraper: failed: Client error '404 Not Found' for url 'https://www.catho.com.br/vagas/?q=python%20developer'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/404
+2026-03-09 00:36:48 Ôöé INFO    Ôöé app.services.jobsearch.cathoscraper Ôöé CathoScraper: returning 0 jobs
+2026-03-09 00:36:48 Ôöé INFO    Ôöé __main__ Ôöé Ô£à CathoScraper: found 0 jobs for 'python developer'
+2026-03-09 00:36:48 Ôöé INFO    Ôöé app.services.jobsearch.geekhunter Ôöé GeekHunterScraper: found 0 results for 'python developer'
+2026-03-09 00:36:48 Ôöé INFO    Ôöé __main__ Ôöé Ô£à GeekHunterScraper: found 0 jobs for 'python developer'
+2026-03-09 00:36:54 Ôöé WARNING Ôöé app.services.jobsearch.remotar Ôöé RemotarScraper: URL https://remotar.com.br/search?query=python+developer failed: Client error '404 Not Found' for url 'https://remotar.com.br/search?query=python+developer'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/404
+2026-03-09 00:36:55 Ôöé INFO    Ôöé httpx Ôöé HTTP Request: GET https://remotar.com.br "HTTP/1.1 200 OK"
+2026-03-09 00:36:55 Ôöé INFO    Ôöé app.services.jobsearch.remotar Ôöé RemotarScraper: found 0 results for 'python developer'
+2026-03-09 00:36:55 Ôöé INFO    Ôöé __main__ Ôöé Ô£à RemotarScraper: found 0 jobs for 'python developer'

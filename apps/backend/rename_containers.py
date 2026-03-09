@@ -1,6 +1,6 @@
 import paramiko
 
-def fix_containers():
+def rename_containers():
     host = "187.77.50.247"
     port = 22
     username = "root"
@@ -14,9 +14,14 @@ def fix_containers():
         client.connect(hostname=host, port=port, username=username, password=password)
         
         commands = [
+            "docker stop 634482e5a080_jobhunter-mongo 3c4428af7b4b_jobhunter-redis || true",
+            "docker rename 634482e5a080_jobhunter-mongo jobhunter-mongo || true",
+            "docker rename 3c4428af7b4b_jobhunter-redis jobhunter-redis || true",
+            "docker start jobhunter-mongo jobhunter-redis",
+            "docker restart jobhunter-spider",
+            "sleep 5",
             "docker exec jobhunter-spider getent hosts jobhunter-mongo",
-            "docker exec jobhunter-spider getent hosts 634482e5a080_jobhunter-mongo",
-            "docker logs --tail=150 jobhunter-spider | grep -iE 'mongodb|error'"
+            "docker exec jobhunter-spider getent hosts jobhunter-redis",
         ]
         
         for cmd in commands:
@@ -33,4 +38,4 @@ def fix_containers():
         client.close()
 
 if __name__ == "__main__":
-    fix_containers()
+    rename_containers()
