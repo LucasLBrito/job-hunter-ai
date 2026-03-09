@@ -1,0 +1,68 @@
+﻿Connecting to 187.77.50.247 via SSH...
+> docker start 634482e5a080
+634482e5a080
+> docker start 3c4428af7b4b
+3c4428af7b4b
+> docker restart jobhunter-spider
+jobhunter-spider
+> sleep 10
+> docker ps
+CONTAINER ID   IMAGE                           COMMAND                  CREATED         STATUS          PORTS                                         NAMES
+76a9881cea35   job-hunter-ai_spider-worker     "sh -c 'while true; ÔÇª"   7 minutes ago   Up 10 seconds   8000/tcp                                      jobhunter-spider
+6d8b95b39f21   job-hunter-ai_frontend:latest   "docker-entrypoint.sÔÇª"   2 days ago      Up 2 days       0.0.0.0:3000->3000/tcp, [::]:3000->3000/tcp   jobhunter-frontend
+17188f7890a9   job-hunter-ai_backend           "sh -c 'alembic upgrÔÇª"   2 days ago      Up 2 days       0.0.0.0:8000->8000/tcp, [::]:8000->8000/tcp   jobhunter-backend
+f7664eab3089   job-hunter-ai_etl-worker        "python /app/etl/worÔÇª"   2 days ago      Up 2 days       8000/tcp                                      jobhunter-etl-worker
+3c4428af7b4b   redis:7-alpine                  "docker-entrypoint.sÔÇª"   2 days ago      Up 20 seconds   6379/tcp                                      3c4428af7b4b_jobhunter-redis
+c5d007e10264   postgres:15-alpine              "docker-entrypoint.sÔÇª"   2 days ago      Up 2 days       5432/tcp                                      jobhunter-postgres
+634482e5a080   mongo:6                         "docker-entrypoint.sÔÇª"   2 days ago      Up 20 seconds   27017/tcp                                     634482e5a080_jobhunter-mongo
+> docker logs --tail=50 jobhunter-spider
+ERROR: 2026-03-09 00:36:19 Ôöé INFO    Ôöé httpx Ôöé HTTP Request: GET https://portal.api.gupy.io/api/v1/jobs?jobName=python+developer&limit=40&offset=0 "HTTP/1.1 200 OK"
+2026-03-09 00:36:19 Ôöé INFO    Ôöé app.services.jobsearch.gupy Ôöé GupyScraper: found 0 results for 'python developer'
+2026-03-09 00:36:19 Ôöé INFO    Ôöé __main__ Ôöé Ô£à GupyScraper: found 0 jobs for 'python developer'
+2026-03-09 00:36:19 Ôöé INFO    Ôöé __main__ Ôöé ­ƒöì RemoteOKScraper: starting search for 'python developer' (limit=50)
+2026-03-09 00:36:19 Ôöé INFO    Ôöé app.services.jobsearch.remoteok Ôöé RemoteOKScraper: Searching for 'python developer'
+2026-03-09 00:36:19 Ôöé INFO    Ôöé httpx Ôöé HTTP Request: GET https://remoteok.com/api "HTTP/1.1 200 OK"
+2026-03-09 00:36:19 Ôöé ERROR   Ôöé app.services.jobsearch.remoteok Ôöé RemoteOKScraper: API failed: Expecting value: line 1 column 2 (char 1), trying HTML fallback
+2026-03-09 00:36:19 Ôöé WARNING Ôöé app.services.jobsearch.base Ôöé CathoScraper: attempt 2/3 failed for https://api-vagas.catho.com.br/v2/vagas: [Errno -2] Name or service not known. Retrying in 4.8s...
+2026-03-09 00:36:19 Ôöé INFO    Ôöé httpx Ôöé HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+2026-03-09 00:36:19 Ôöé INFO    Ôöé app.services.jobsearch.exa_scraper Ôöé ExaScraper: Found 47 semantic results
+2026-03-09 00:36:19 Ôöé INFO    Ôöé __main__ Ôöé Ô£à ExaScraper: found 47 jobs for 'python developer'
+2026-03-09 00:36:19 Ôöé INFO    Ôöé __main__ Ôöé ­ƒöì RemotarScraper: starting search for 'python developer' (limit=50)
+2026-03-09 00:36:19 Ôöé INFO    Ôöé app.services.jobsearch.remotar Ôöé RemotarScraper: Searching for 'python developer'
+2026-03-09 00:36:19 Ôöé INFO    Ôöé httpx Ôöé HTTP Request: GET https://remoteok.com/remote-dev-jobs "HTTP/1.1 200 OK"
+2026-03-09 00:36:19 Ôöé INFO    Ôöé app.services.jobsearch.remoteok Ôöé RemoteOKScraper (HTML fallback): found 0 jobs
+2026-03-09 00:36:19 Ôöé INFO    Ôöé __main__ Ôöé Ô£à RemoteOKScraper: found 0 jobs for 'python developer'
+2026-03-09 00:36:19 Ôöé INFO    Ôöé __main__ Ôöé ­ƒöì GeekHunterScraper: starting search for 'python developer' (limit=50)
+2026-03-09 00:36:19 Ôöé INFO    Ôöé app.services.jobsearch.geekhunter Ôöé GeekHunterScraper: Searching for 'python developer'
+2026-03-09 00:36:20 Ôöé INFO    Ôöé httpx Ôöé HTTP Request: GET https://www.vagas.com.br/vagas-de-python-developer "HTTP/1.1 403 Forbidden"
+2026-03-09 00:36:20 Ôöé WARNING Ôöé app.services.jobsearch.base Ôöé VagasScraper: attempt 2/3 failed for https://www.vagas.com.br/vagas-de-python-developer: Client error '403 Forbidden' for url 'https://www.vagas.com.br/vagas-de-python-developer'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403. Retrying in 4.3s...
+2026-03-09 00:36:20 Ôöé INFO    Ôöé httpx Ôöé HTTP Request: GET https://remotar.com.br/vagas "HTTP/1.1 404 Not Found"
+2026-03-09 00:36:20 Ôöé WARNING Ôöé app.services.jobsearch.base Ôöé RemotarScraper: attempt 1/3 failed for https://remotar.com.br/vagas: Client error '404 Not Found' for url 'https://remotar.com.br/vagas'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/404. Retrying in 2.4s...
+2026-03-09 00:36:21 Ôöé INFO    Ôöé httpx Ôöé HTTP Request: POST https://api.tavily.com/search "HTTP/1.1 200 OK"
+2026-03-09 00:36:21 Ôöé INFO    Ôöé app.services.jobsearch.tavily_scraper Ôöé TavilyScraper: Found 46 jobs for query 'python developer'
+2026-03-09 00:36:21 Ôöé INFO    Ôöé __main__ Ôöé Ô£à TavilyScraper: found 46 jobs for 'python developer'
+2026-03-09 00:36:21 Ôöé INFO    Ôöé __main__ Ôöé ­ƒöì CoodeshScraper: starting search for 'python developer' (limit=50)
+2026-03-09 00:36:21 Ôöé INFO    Ôöé app.services.jobsearch.coodesh Ôöé CoodeshScraper: Searching for 'python developer'
+2026-03-09 00:36:22 Ôöé INFO    Ôöé httpx Ôöé HTTP Request: GET https://coodesh.com/vagas?search=python+developer "HTTP/1.1 308 Permanent Redirect"
+2026-03-09 00:36:22 Ôöé INFO    Ôöé httpx Ôöé HTTP Request: GET https://coodesh.com/jobs?search=python%20developer "HTTP/1.1 200 OK"
+2026-03-09 00:36:22 Ôöé INFO    Ôöé httpx Ôöé HTTP Request: GET https://www.geekhunter.com.br/vagas?q=python+developer "HTTP/1.1 200 OK"
+2026-03-09 00:36:22 Ôöé INFO    Ôöé httpx Ôöé HTTP Request: GET https://coodesh.com/vagas "HTTP/1.1 308 Permanent Redirect"
+2026-03-09 00:36:23 Ôöé INFO    Ôöé httpx Ôöé HTTP Request: GET https://coodesh.com/jobs "HTTP/1.1 200 OK"
+2026-03-09 00:36:23 Ôöé INFO    Ôöé app.services.jobsearch.coodesh Ôöé CoodeshScraper: found 0 results for 'python developer'
+2026-03-09 00:36:23 Ôöé INFO    Ôöé __main__ Ôöé Ô£à CoodeshScraper: found 0 jobs for 'python developer'
+2026-03-09 00:36:23 Ôöé INFO    Ôöé __main__ Ôöé ­ƒöì FreelaScraper: starting search for 'python developer' (limit=50)
+2026-03-09 00:36:23 Ôöé INFO    Ôöé httpx Ôöé HTTP Request: GET https://www.99freelas.com.br/projects?q=python+developer "HTTP/1.1 403 Forbidden"
+2026-03-09 00:36:23 Ôöé WARNING Ôöé app.services.jobsearch.base Ôöé FreelaScraper: attempt 1/3 failed for https://www.99freelas.com.br/projects: Client error '403 Forbidden' for url 'https://www.99freelas.com.br/projects?q=python+developer'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403. Retrying in 3.0s...
+2026-03-09 00:36:23 Ôöé INFO    Ôöé httpx Ôöé HTTP Request: GET https://remotar.com.br/vagas "HTTP/1.1 404 Not Found"
+2026-03-09 00:36:23 Ôöé WARNING Ôöé app.services.jobsearch.base Ôöé RemotarScraper: attempt 2/3 failed for https://remotar.com.br/vagas: Client error '404 Not Found' for url 'https://remotar.com.br/vagas'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/404. Retrying in 4.6s...
+2026-03-09 00:36:24 Ôöé WARNING Ôöé app.services.jobsearch.base Ôöé CathoScraper: attempt 3/3 failed for https://api-vagas.catho.com.br/v2/vagas: [Errno -2] Name or service not known. Retrying in 8.2s...
+2026-03-09 00:36:24 Ôöé INFO    Ôöé httpx Ôöé HTTP Request: GET https://www.vagas.com.br/vagas-de-python-developer "HTTP/1.1 403 Forbidden"
+2026-03-09 00:36:24 Ôöé WARNING Ôöé app.services.jobsearch.base Ôöé VagasScraper: attempt 3/3 failed for https://www.vagas.com.br/vagas-de-python-developer: Client error '403 Forbidden' for url 'https://www.vagas.com.br/vagas-de-python-developer'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403. Retrying in 9.0s...
+2026-03-09 00:36:26 Ôöé INFO    Ôöé httpx Ôöé HTTP Request: GET https://www.99freelas.com.br/projects?q=python+developer "HTTP/1.1 403 Forbidden"
+2026-03-09 00:36:26 Ôöé WARNING Ôöé app.services.jobsearch.base Ôöé FreelaScraper: attempt 2/3 failed for https://www.99freelas.com.br/projects: Client error '403 Forbidden' for url 'https://www.99freelas.com.br/projects?q=python+developer'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403. Retrying in 4.6s...

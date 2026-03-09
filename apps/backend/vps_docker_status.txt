@@ -1,0 +1,17 @@
+﻿Connecting to 187.77.50.247 via SSH...
+NETWORK ID     NAME                          DRIVER    SCOPE
+818670bba10e   bridge                        bridge    local
+5cb93202ccf9   host                          host      local
+4a7f66126a17   job-hunter-ai_jobhunter-net   bridge    local
+b71a32841fca   job-hunter-ai_jobhunter_net   bridge    local
+411c21a5436b   none                          null      local
+CONTAINER ID   IMAGE                           COMMAND                  CREATED         STATUS                      PORTS                                         NAMES
+76a9881cea35   job-hunter-ai_spider-worker     "sh -c 'while true; ÔÇª"   6 minutes ago   Up 6 minutes                8000/tcp                                      jobhunter-spider
+6d8b95b39f21   job-hunter-ai_frontend:latest   "docker-entrypoint.sÔÇª"   2 days ago      Up 2 days                   0.0.0.0:3000->3000/tcp, [::]:3000->3000/tcp   jobhunter-frontend
+7a29f79241df   761a7224cddc                    "docker-entrypoint.sÔÇª"   2 days ago      Exited (0) 2 days ago                                                     7a29f79241df_jobhunter-frontend
+17188f7890a9   job-hunter-ai_backend           "sh -c 'alembic upgrÔÇª"   2 days ago      Up 2 days                   0.0.0.0:8000->8000/tcp, [::]:8000->8000/tcp   jobhunter-backend
+f7664eab3089   job-hunter-ai_etl-worker        "python /app/etl/worÔÇª"   2 days ago      Up 2 days                   8000/tcp                                      jobhunter-etl-worker
+6f5dd6da6ac5   47d1dd556e19                    "sh -c 'while true; ÔÇª"   2 days ago      Exited (137) 2 hours ago                                                  6f5dd6da6ac5_jobhunter-spider
+3c4428af7b4b   redis:7-alpine                  "docker-entrypoint.sÔÇª"   2 days ago      Exited (0) 10 minutes ago                                                 3c4428af7b4b_jobhunter-redis
+c5d007e10264   postgres:15-alpine              "docker-entrypoint.sÔÇª"   2 days ago      Up 2 days                   5432/tcp                                      jobhunter-postgres
+634482e5a080   mongo:6                         "docker-entrypoint.sÔÇª"   2 days ago      Exited (0) 10 minutes ago                                                 634482e5a080_jobhunter-mongo
